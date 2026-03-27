@@ -2,3 +2,7 @@
 ## Mission Overview
 The main objective of this project is to design, create and validate an autonomous mobile robot (AMR system) based on the Turtlebot3 system to simulate intralogistics operations in a simulated smart warehouse environment. The AMR system must be capable of autonomously navigating an unknown maze-like environment while constructing a map of the environment, localizing itself and carrying out a series of tasks to deliver three ping pong balls into pre identified receptacles (static and dynamic) without human intervention or line-following methods.
 ## Problem Definition
+
+
+## Software Codebase
+- [Remote PC Codebase](https://github.com/eggsacc/CDE2310-Docs/tree/main/remote_pc_codebase)
