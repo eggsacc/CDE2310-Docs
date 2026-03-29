@@ -32,7 +32,7 @@ The main objective of this project is to design, create and validate an autonomo
 ├── README.md                   ← you are here
 ├── CHANGELOG.md                ← version history (SemVer)
 ├── .gitignore
-│
+├── remote-pc-codebase          ← Software environment setup guide
 ├── docs/                       ← Part 1: Systems Design Documents (SDD)
 │   ├── 01-requirements/
 │   ├── 02-con-ops/
