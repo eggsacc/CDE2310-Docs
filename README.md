@@ -32,7 +32,7 @@ The main objective of this project is to design, create and validate an autonomo
 ├── README.md                   ← you are here
 ├── CHANGELOG.md                ← version history (SemVer)
 ├── .gitignore
-│
+├── remote-pc-codebase          ← Software environment setup guide
 ├── docs/                       ← Part 1: Systems Design Documents (SDD)
 │   ├── 01-requirements/
 │   ├── 02-con-ops/
@@ -89,11 +89,8 @@ The main objective of this project is to design, create and validate an autonomo
 - ROS 2 Humble ([installation guide](https://docs.ros.org/en/humble/Installation.html))
 - TurtleBot3 packages
 
-```bash
-sudo apt install ros-humble-turtlebot3* ros-humble-navigation2 ros-humble-nav2-bringup
-```
 ## Software Codebase setup
-- [Remote PC Codebase](https://github.com/eggsacc/CDE2310-Docs/tree/main/remote_pc_codebase)
+- [Remote PC Codebase](https://github.com/eggsacc/CDE2310-Docs/tree/main/remote-pc-codebase)
 
 ### Launch (full mission)
 
