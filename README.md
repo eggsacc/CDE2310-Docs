@@ -76,7 +76,7 @@ The main objective of this project is to design, create and validate an autonomo
 |--------|------|--------|
 | Member A | Software lead (ROS 2, SLAM, navigation) | @username |
 | Wang yizhang | Hardware lead (payload mechanism) | @eggsacc |
-| Member C | Electronics lead (wiring, power, sensors) | @username |
+| Gregorius Nicholas Sutedja | Electronics lead (wiring, power, sensors) | @Nikidudu |
 | Garg Divyansh | Systems lead (SDD, ICD, testing, integration) | @garg-divyansh |
 
 ---
