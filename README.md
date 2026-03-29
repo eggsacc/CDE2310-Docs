@@ -77,7 +77,7 @@ The main objective of this project is to design, create and validate an autonomo
 | Member A | Software lead (ROS 2, SLAM, navigation) | @username |
 | Wang yizhang | Hardware lead (payload mechanism) | @eggsacc |
 | Member C | Electronics lead (wiring, power, sensors) | @username |
-| Member D | Systems lead (SDD, ICD, testing, integration) | @username |
+| Garg Divyansh | Systems lead (SDD, ICD, testing, integration) | @garg-divyansh |
 
 ---
 
@@ -89,8 +89,11 @@ The main objective of this project is to design, create and validate an autonomo
 - ROS 2 Humble ([installation guide](https://docs.ros.org/en/humble/Installation.html))
 - TurtleBot3 packages
 
+```bash
+sudo apt install ros-humble-turtlebot3* ros-humble-navigation2 ros-humble-nav2-bringup
+```
 ## Software Codebase setup
-- [Remote PC Codebase](https://github.com/eggsacc/CDE2310-Docs/tree/main/remote-pc-codebase)
+- [Remote PC Codebase](https://github.com/eggsacc/CDE2310-Docs/tree/main/remote_pc_codebase)
 
 ### Launch (full mission)
 
