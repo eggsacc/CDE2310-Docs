@@ -11,18 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Add new entries here as you develop. When ready to release, rename this section to the new
 > version (e.g., `## [1.1.0] - YYYY-MM-DD`) and create a fresh `[Unreleased]` section above it.
 
-## [1.0.0] - 2026-04-06
+## [0.1.0] - 2026-04-06
 
 ### Added
 
-- `r2auto_nav.py` — LIDAR-based autonomous navigation with obstacle avoidance
-- `exploration.py` — frontier-based map exploration using Nav2
-- `fsm_controller.py` — finite state machine orchestrating the full explore-dock mission
-- `docking.py` — three-phase autonomous docking using ArUco marker detection
-- `r2occupancy2.py` — live occupancy grid visualization centered on robot pose
-- `r2moverotate.py` — keyboard teleop with precise angle control
-- `r2mover.py` — simple keyboard teleop (w/x/a/d)
-- `r2scanner.py` — LIDAR monitoring utility
+- Initial release of the `auto_nav` ROS2 package
+- Autonomous navigation with LIDAR-based obstacle avoidance
+- Frontier-based exploration for unknown environment mapping
+- Finite state machine (FSM) for coordinating multi-stage missions (explore, dock, launch)
+- Autonomous docking using ArUco marker detection
+- Live occupancy grid visualization centered on robot pose
+- Keyboard teleoperation with both simple and rotation-based control
+- LIDAR scanning and monitoring utilities
+- RPi-based ArUco marker detection with TF transform broadcasting 
+- RPi-based servo and solenoid actuation triggered by LIDAR proximity 
 
-[unreleased]: https://github.com/eggsacc/CDE2310-Docs/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/eggsacc/CDE2310-Docs/releases/tag/v1.0.0
+[unreleased]: https://github.com/eggsacc/CDE2310-Docs/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/eggsacc/CDE2310-Docs/releases/tag/v0.1.0
