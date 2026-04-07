@@ -10,8 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Changes that have been merged into the repository but not yet tagged with a version number.
 > Add new entries here as you develop. When ready to release, rename this section to the new
 > version (e.g., `## [1.1.0] - YYYY-MM-DD`) and create a fresh `[Unreleased]` section above it.
+
+### Added
+
+- Modified exploration code to cancel goal when fsm_status is not "EXPLORE"
 - Modified FSM code to account for TIMEOUT status
-- fixing logical issues with fsm and exploration nodes
+- Tuned docking node parameters (standoff distances, tolerances, velocity limits) to improve final alignment accuracy
+- Moved all ros2 packages and firmware code under software
+- Added arduino launcher control firmware
+
+### Removed
+
+- Removed `docking_test.py`, an outdated standalone docking script superseded by the current `docking.py` node
 
 ## [0.1.0] - 2026-04-06
 

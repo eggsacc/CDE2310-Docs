@@ -23,25 +23,24 @@ on /states (format: 'DOCK_<marker_id>'), reports on /operation_status.
 === DOCKING PHASES ===
 
   Phase 1 — NAV_TO_STANDOFF (odom-based)
-      Queries marker via TF twice, rejects if distance differs by
-      >10%, then uses the second (fresher) reading to compute a
+      Queries marker via TF, then uses the reading to compute a
       goal point along the marker's normal at nav_standoff distance
-      (20cm). Navigates there using odom frame dead reckoning.
+      (35cm referencing base_link). Navigates there using odom frame dead reckoning.
       On arrival, rotates to face the marker.
 
   Phase 2 — FINE_APPROACH (TF-based with EMA filtering)
       Re-acquires marker via TF with exponential moving average
-      smoothing on position and normal. Drives from 20cm to 15cm
+      smoothing on position and normal. Drives from 35cm to 30cm
       while correcting lateral offset and heading. Angular control
       blends bearing correction (far) with heading alignment (near).
-      Transitions when lateral alignment < lateral_tol (0.5cm).
+      Transitions when lateral alignment < lateral_tol (3cm).
       If marker is lost for >2s, performs a 360° recovery spin.
       If re-acquired during spin, resumes approach. If not found
       after full rotation, reports DOCK_FAIL.
 
   Phase 3 — LIDAR_FINAL
       Switches to LIDAR for distance measurement. Drives straight to
-      final standoff_distance (8cm) — heading is already aligned from
+      final standoff_distance (20cm) — heading is already aligned from
       Phase 2's blended angular control. Stops and reports DOCK_DONE.
 
 === TOPICS ===
@@ -55,33 +54,33 @@ on /states (format: 'DOCK_<marker_id>'), reports on /operation_status.
   docking_callback()        — parses DOCK command, starts docking
   docking_step()            — 10Hz loop routing to current phase
   _lookup_marker_bl()       — single TF lookup → (pos, normal) in base_link
-  _compute_odom_goal()      — two-sample TF → goal in odom frame
+  _compute_odom_goal()      — single TF lookup → goal in odom frame
   _get_robot_odom_pose()    — robot (x, y, yaw) in odom frame
   _extract_normal()         — marker normal with flip detection
   _get_marker_data()        — TF lookup with EMA filtering
   _phase_nav_to_standoff()  — Phase 1: odom nav to standoff point
-  _phase_fine_approach()    — Phase 2: TF fine approach to 15cm
+  _phase_fine_approach()    — Phase 2: TF fine approach to 30cm
   _recovery_spin_tick()     — Phase 2: 360° spin searching for marker
-  _phase_lidar_final()      — Phase 3: LIDAR approach to 8cm
+  _phase_lidar_final()      — Phase 3: LIDAR approach to 20cm
   _finish_docking()         — cleanup + publish status
 
 === PARAMETERS (all configurable via ros2 run --ros-args -p name:=val) ===
-  nav_standoff       — Phase 1 goal distance from marker (0.20 m)
-  fine_approach_dist — Phase 2 stopping distance (0.15 m)
-  standoff_distance  — Phase 3 final distance (0.08 m)
+  nav_standoff       — Phase 1 goal distance from marker (0.35 m)
+  fine_approach_dist — Phase 2 stopping distance (0.30 m)
+  standoff_distance  — Phase 3 final distance (0.20 m)
   odom_position_tol  — Phase 1 arrival tolerance (0.02 m)
-  lateral_tol        — Phase 2 lateral alignment (0.005 m)
-  distance_tol       — Phase 2 distance tolerance (0.01 m)
-  final_tol          — Phase 3 LIDAR tolerance (0.005 m)
+  lateral_tol        — Phase 2 lateral alignment (0.03 m)
+  distance_tol       — Phase 2 distance tolerance (0.03 m)
+  final_tol          — Phase 3 LIDAR tolerance (0.03 m)
   heading_tol        — angular tolerance throughout (0.05 rad)
   angular_threshold  — min angle error to trigger pure rotation (0.05 rad)
   k_linear / k_angular — proportional gains (0.5 / 1.0)
   lidar_arc_deg      — LIDAR sampling half-arc (3.0 deg)
   lpf_alpha          — EMA smoothing factor (0.35)
-  max_linear / max_angular — velocity limits (0.15 m/s / 0.5 rad/s)
-  min_angular        — deadband floor for rotation (0.05 rad/s)
-  recovery_spin_speed — angular velocity for recovery spin (0.3 rad/s)
-  timeout_sec        — safety abort timer (45.0 s)
+  max_linear / max_angular — velocity limits (0.10 m/s / 0.05 rad/s)
+  min_angular        — deadband floor for rotation (0.01 rad/s)
+  recovery_spin_speed — angular velocity for recovery spin (0.1 rad/s)
+  timeout_sec        — safety abort timer (120.0 s)
   verbose            — debug logging (False)
 """
 
@@ -155,24 +154,24 @@ class DockingNode(Node):
         self.recovery_spin_attempted = False
 
         # --- ROS2 parameters ---
-        self.declare_parameter("nav_standoff", 0.20)        # Phase 1 goal distance from marker along normal (m)
-        self.declare_parameter("fine_approach_dist", 0.15)   # Phase 2 stopping distance from marker (m)
-        self.declare_parameter("standoff_distance", 0.08)    # Phase 3 final distance from marker surface (m)
+        self.declare_parameter("nav_standoff", 0.35)        # Phase 1 goal distance from marker along normal (m)
+        self.declare_parameter("fine_approach_dist", 0.30)   # Phase 2 stopping distance from marker (m)
+        self.declare_parameter("standoff_distance", 0.20)    # Phase 3 final distance from marker surface (m)
         self.declare_parameter("odom_position_tol", 0.02)    # Phase 1 odom arrival position tolerance (m)
-        self.declare_parameter("lateral_tol", 0.005)         # Phase 2 lateral alignment tolerance (m)
-        self.declare_parameter("distance_tol", 0.01)         # Phase 2 distance arrival tolerance (m)
-        self.declare_parameter("final_tol", 0.005)           # Phase 3 LIDAR distance tolerance (m)
+        self.declare_parameter("lateral_tol", 0.03)            # Phase 2 lateral alignment tolerance (m)
+        self.declare_parameter("distance_tol", 0.03)         # Phase 2 distance arrival tolerance (m)
+        self.declare_parameter("final_tol", 0.03)            # Phase 3 LIDAR distance tolerance (m)
         self.declare_parameter("heading_tol", 0.05)          # Angular tolerance for heading alignment (rad)
         self.declare_parameter("angular_threshold", 0.05)    # Min angle error to trigger pure rotation (rad)
         self.declare_parameter("k_linear", 0.5)              # Proportional gain for forward speed
         self.declare_parameter("k_angular", 1.0)             # Proportional gain for rotation speed
         self.declare_parameter("lidar_arc_deg", 3.0)         # LIDAR sampling half-arc width (deg)
         self.declare_parameter("lpf_alpha", 0.35)            # EMA smoothing factor (0=smooth, 1=raw)
-        self.declare_parameter("max_linear", 0.15)           # Max forward velocity (m/s)
-        self.declare_parameter("max_angular", 0.5)           # Max rotation velocity (rad/s)
-        self.declare_parameter("min_angular", 0.05)          # Deadband floor for rotation commands (rad/s)
-        self.declare_parameter("recovery_spin_speed", 0.3)    # Recovery spin angular velocity (rad/s)
-        self.declare_parameter("timeout_sec", 45.0)          # Safety abort timer (s)
+        self.declare_parameter("max_linear", 0.1)           # Max forward velocity (m/s)
+        self.declare_parameter("max_angular", 0.05)           # Max rotation velocity (rad/s)
+        self.declare_parameter("min_angular", 0.01)          # Deadband floor for rotation commands (rad/s)
+        self.declare_parameter("recovery_spin_speed", 0.1)    # Recovery spin angular velocity (rad/s)
+        self.declare_parameter("timeout_sec", 120.0)          # Safety abort timer (s)
         self.declare_parameter("verbose", False)             # Enable debug logging
         self._load_params()
 
@@ -210,6 +209,7 @@ class DockingNode(Node):
         """Min LIDAR distance within a small arc around angle_rad.
         Returns None if no valid readings in the arc."""
         if self.latest_scan is None:
+            self.get_logger().debug("No LIDAR scan available")
             return None
 
         scan = self.latest_scan
@@ -225,11 +225,19 @@ class DockingNode(Node):
 
         # Sample arc, wrapping around the array
         valid = []
+        invalid_count = 0
         for i in range(-arc_half, arc_half + 1):
             idx = (center_idx + i) % len(scan.ranges)
             r = scan.ranges[idx]
-            if scan.range_min < r < scan.range_max and math.isfinite(r):
+            if math.isfinite(r) and scan.range_min <= r <= scan.range_max:
                 valid.append(r)
+            else:
+                invalid_count += 1
+
+        if not valid and self.verbose:
+            self.get_logger().debug(
+                f"LIDAR arc empty: sampled {arc_half*2+1} rays, "
+                f"{invalid_count} invalid (range=[{scan.range_min:.3f}, {scan.range_max:.3f}])")
 
         return min(valid) if valid else None
 
@@ -314,14 +322,14 @@ class DockingNode(Node):
         normal = rotation_matrix[:, 2].copy()
         normal[2] = 0.0
 
-        # Normal should point toward robot (negative x in base_link)
-        if normal[0] > 0:
-            normal = -normal
-
         # Reject sudden 180-deg flips
         if self.prev_normal is not None:
             if np.dot(normal, self.prev_normal) < 0:
                 normal = -normal
+
+        # Normal must point toward robot (negative x in base_link)
+        if normal[0] > 0:
+            normal = -normal
 
         n = np.linalg.norm(normal)
         if n > 1e-6:
@@ -329,12 +337,20 @@ class DockingNode(Node):
         self.prev_normal = normal.copy()
         return normal
 
-    def _lookup_marker_bl(self):
+    def _lookup_marker_bl(self, max_age=0.5):
         """Single TF lookup returning (position, normal) in base_link.
+        Rejects transforms older than max_age seconds.
         Raises LookupException/ExtrapolationException on failure."""
         tf = self.tf_buffer.lookup_transform(
             'base_link', f'aruco_marker_{self.marker_id}',
             rclpy.time.Time())
+
+        age = (self.get_clock().now() - rclpy.time.Time.from_msg(
+            tf.header.stamp)).nanoseconds / 1e9
+        if age > max_age:
+            raise LookupException(
+                f"Marker TF is {age:.2f}s old (max {max_age}s)")
+
         t = tf.transform.translation
         q = tf.transform.rotation
         R = Rotation.from_quat([q.x, q.y, q.z, q.w]).as_matrix()
@@ -343,32 +359,16 @@ class DockingNode(Node):
         return pos, normal
 
     def _compute_odom_goal(self):
-        """Two-sample TF lookup to place a goal point nav_standoff metres
-        in front of the marker (along its normal) in odom frame.
-        Retries until two consecutive readings agree within 15%.
-        Uses the second (fresher) reading for the goal."""
+        """TF lookup to place a goal point nav_standoff metres
+        in front of the marker (along its normal) in odom frame."""
 
-        max_retries = 10
-        for attempt in range(max_retries):
-            pos1, _ = self._lookup_marker_bl()
-            dist1 = float(np.linalg.norm(pos1[:2]))
+        marker_pos, normal = self._lookup_marker_bl()
+        marker_dist = float(np.linalg.norm(marker_pos[:2]))
 
-            pos2, normal = self._lookup_marker_bl()
-            dist2 = float(np.linalg.norm(pos2[:2]))
-
-            if dist1 > 1e-6 and abs(dist2 - dist1) / dist1 > 0.15:
-                self.get_logger().info(
-                    f"TF mismatch ({dist1:.3f}m vs {dist2:.3f}m), "
-                    f"retry {attempt + 1}/{max_retries}")
-                continue
-
-            # Two frames are consistent — use the second
-            break
-        else:
-            raise LookupException(
-                f"TF readings inconsistent after {max_retries} retries")
-
-        marker_pos = pos2
+        self.get_logger().info(
+            f"Marker detected at {marker_dist:.3f}m, "
+            f"pos=({marker_pos[0]:.3f}, {marker_pos[1]:.3f}), "
+            f"normal=({normal[0]:.3f}, {normal[1]:.3f})")
 
         # Goal in base_link: standoff point along marker normal
         goal_bl = marker_pos + self.nav_standoff * normal
@@ -431,7 +431,7 @@ class DockingNode(Node):
     # ================================================================
 
     def _phase_nav_to_standoff(self):
-        """Navigate to 20cm standoff via odom, then rotate to face marker.
+        """Navigate to 35cm standoff via odom, then rotate to face marker.
         First call computes goal from a single TF lookup. Subsequent
         calls drive toward the odom-frame goal with P-control."""
 
@@ -452,7 +452,7 @@ class DockingNode(Node):
             return
         rx, ry, ryaw = pose
 
-        dx = self.goal_odom_x - rx
+        dx = self.goal_odom_x - rx 
         dy = self.goal_odom_y - ry
         dist = math.sqrt(dx**2 + dy**2)
         cmd = Twist()
@@ -499,7 +499,12 @@ class DockingNode(Node):
                 self.prev_normal = None
                 return
 
-        self.cmd_pub.publish(cmd) #publishes stop if already reached goal position
+        if self.verbose:
+            self.get_logger().info(
+                f"NAV: dist_to_goal={dist:.3f}m, "
+                f"linear={cmd.linear.x:.3f}, angular={cmd.angular.z:.3f}",
+                throttle_duration_sec=0.5)
+        self.cmd_pub.publish(cmd)
 
     # ================================================================
     # PHASE 2: TF-BASED FINE APPROACH TO 15CM
@@ -657,6 +662,9 @@ class DockingNode(Node):
         control, so no TF angular corrections are applied here."""
 
         lidar_dist = self.get_lidar_distance(0.0)
+        if self.verbose:
+            self.get_logger().info(f"LIDAR: distance={lidar_dist:.3f}m" if lidar_dist is not None
+                                   else "LIDAR: no valid readings", throttle_duration_sec=0.5)  
         if lidar_dist is None:
             self.cmd_pub.publish(Twist())
             self.get_logger().warn(
@@ -674,9 +682,8 @@ class DockingNode(Node):
             self._finish_docking("DOCK_DONE")
             return
 
-        # Slow final approach (capped at 8cm/s)
-        cmd.linear.x = max(-0.08, min(0.08,
-                                       self.k_linear * distance_err))
+        # Constant velocity approach (1cm/s)
+        cmd.linear.x = 0.01 if distance_err > 0 else -0.01
         self.cmd_pub.publish(cmd)
 
     # ================================================================
