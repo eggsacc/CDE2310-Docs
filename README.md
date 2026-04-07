@@ -1,6 +1,6 @@
 # CDE2310 AY2526 S2 Group 5 
 [![ROS 2](https://img.shields.io/badge/ROS2-Humble-blue)](https://docs.ros.org/en/humble/)
-[![Version](https://img.shields.io/badge/version-0.1.0-green)]()
+[![Version](https://img.shields.io/badge/version-1.0.0-green)](https://github.com/eggsacc/CDE2310-Docs/releases/tag/v1.0.0)
 [![License](https://img.shields.io/badge/license-MIT-lightgrey)]()
 
 ## Mission Overview
@@ -145,6 +145,41 @@ The TurtleBot3 Burger is modified with a custom payload mechanism and mount for 
 
 ---
 
+## Contributing
+
+### Branch Naming
+
+Branches should follow the format `<type>/<short-description>` using lowercase and hyphens:
+
+| Type | When to use | Example |
+|------|-------------|---------|
+| `feat/` | New feature or capability | `feat/aruco-docking` |
+| `fix/` | Bug fix | `fix/lidar-wraparound` |
+| `docs/` | Documentation only | `docs/update-icd` |
+| `test/` | Tests or validation | `test/docking-alignment` |
+| `hw/` | Hardware / CAD changes | `hw/payload-mount-v2` |
+| `sw/` | Software changes not covered above | `sw/feat-docking-params` |
+
+### Commit Messages
+
+Commits follow the [Conventional Commits](https://www.conventionalcommits.org/) format:
+
+```
+<type>(<scope>): <short description>
+```
+
+| Type | When to use | Example |
+|------|-------------|---------|
+| `feat` | New feature added | `feat(docking): add three-phase ArUco docking` |
+| `fix` | Bug fix | `fix(fsm): cancel nav goal on state change` |
+| `docs` | Documentation update | `docs(sw): update FSM state diagram` |
+| `test` | Tests or validation | `test(docking): add alignment tolerance test` |
+
+- **Scope** is the subsystem or file affected (e.g. `docking`, `fsm`, `exploration`, `hardware`)
+- Keep the description short and in the imperative mood ("add", "fix", "update" , not "added" or "fixes")
+
+---
+
 ## Versioning
 
 This project follows [Semantic Versioning 2.0.0](https://semver.org/).
@@ -156,7 +191,16 @@ MAJOR.MINOR.PATCH
   └────────────── breaking changes
 ```
 
-See [`CHANGELOG.md`](CHANGELOG.md) for the full release history.
+### Changelog
+
+All notable changes are recorded in [`CHANGELOG.md`](CHANGELOG.md), following the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format. Changes are grouped under:
+
+- **Added** — new features
+- **Changed** — changes to existing functionality
+- **Removed** — removed features
+- **Fixed** — bug fixes
+
+Unreleased changes are staged under `[Unreleased]` and moved to a versioned section upon release.
 
 ---
 

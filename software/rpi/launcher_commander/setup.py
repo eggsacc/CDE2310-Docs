@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'lidar_servo'
+package_name = 'launcher_commander'
 
 setup(
     name=package_name,
@@ -16,7 +16,7 @@ setup(
     maintainer='grp5',
     maintainer_email='yizhangwang07@gmail.com',
     description='TODO: Package description',
-    license='Apache-2.0',
+    license='TODO: License declaration',
     extras_require={
         'test': [
             'pytest',
@@ -24,7 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'lidar_servo = lidar_servo.lidar_servo:main',
+            'launcher_commander = launcher_commander.launcher_cmd:main',
         ],
     },
 )
