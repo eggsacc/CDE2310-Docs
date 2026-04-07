@@ -56,8 +56,6 @@ class ExplorerNode(Node):
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
         self.timer = self.create_timer(0.5, self.get_robot_pose)
-
-        # Subscriber to the ros2 camera topic
         
 
         # Publisher for rotation
@@ -84,6 +82,7 @@ class ExplorerNode(Node):
         self.explorationtime = time.time()
         self.tvec = None
         self.status_flag = False
+        self.prev_goal = None
 
     # for odometry
     # def odom_callback(self, msg):
@@ -93,6 +92,17 @@ class ExplorerNode(Node):
     #     position = msg.pose.pose.position
     #     self.robot_position = (position.x, position.y)  # Update robot position (row)
 
+    def cancel_navigation(self):
+        """
+        Cancel the current navigation goal.
+        """
+        if hasattr(self, 'current_goal_handle') and self.current_goal_handle:
+            cancel_future = self.current_goal_handle.cancel_goal_async()
+            # self.get_logger().info("Cancelling navigation goal")
+        else:
+            return 
+            # self.get_logger().warning("No active goal to cancel")
+
 
     def status_callback(self, msg):
         # self.get_logger().info(f"Received status: {msg.data}")
@@ -101,6 +111,7 @@ class ExplorerNode(Node):
             # self.get_logger().info("Status set to EXPLORE")
         else:
             self.status_flag = False
+            self.cancel_navigation()
             # self.get_logger().info("Status set to non-EXPLORE")
     
     def get_robot_pose(self):
@@ -166,7 +177,7 @@ class ExplorerNode(Node):
         if not goal_handle.accepted:
             self.get_logger().warning("Goal rejected!")
             return
-
+        self.current_goal_handle = goal_handle  # Store it!
         self.get_logger().info("Goal accepted")
         result_future = goal_handle.get_result_async()
         result_future.add_done_callback(self.navigation_complete_callback)
@@ -256,11 +267,11 @@ class ExplorerNode(Node):
         
         neighbor_threshold = 0.5  # Distance in meters to consider frontiers as neighbors
         min_neighbors_required = 5  # Minimum neighbors required
-        wall_distance_threshold = 5  # Minimum distance from walls in cells (multiply by resolution for meters)
+        wall_distance_threshold = 1  # Minimum distance from walls in cells (multiply by resolution for meters)
         
         # Find all walls in the map
         walls = self.find_walls(map_array, wall_threshold=50)
-        self.get_logger().info(f"Found {len(walls)} wall cells")
+        # self.get_logger().info(f"Found {len(walls)} wall cells")
         
         # Calculate neighbor count and distance for each frontier
         frontier_scores = []
@@ -274,7 +285,7 @@ class ExplorerNode(Node):
             position_y = frontier[0] * self.map_data.info.resolution + self.map_data.info.origin.position.y
             distance_to_robot = np.sqrt((robot_x - position_x)**2 + (robot_y - position_y)**2)
             
-            if distance_to_robot < 0.5:  # Skip frontiers too close to robot
+            if distance_to_robot < 1.0:  # Skip frontiers too close to robot
                 continue
             
             # Check distance to nearest wall
@@ -304,8 +315,8 @@ class ExplorerNode(Node):
             self.get_logger().warning(f"No frontier found with more than {min_neighbors_required} neighbors and far enough from walls")
             return None
         
-        # Sort by distance (ascending) to get the closest one
-        frontier_scores.sort(key=lambda x: x[1])
+        # Sort by distance (descending) to get the furthest from walls
+        frontier_scores.sort(key=lambda x: x[3], reverse=True)
         
         chosen_frontier = frontier_scores[0][2]
         neighbor_count, distance, wall_distance = frontier_scores[0][0], frontier_scores[0][1], frontier_scores[0][3]
@@ -316,7 +327,7 @@ class ExplorerNode(Node):
         return chosen_frontier
 
     def explore(self):
-        #if self.status_flag:
+        if self.status_flag:
             if self.map_data is None:
                 self.get_logger().warning("No map data available")
                 return
@@ -351,12 +362,21 @@ class ExplorerNode(Node):
             goal_x = chosen_frontier[1] * self.map_data.info.resolution + self.map_data.info.origin.position.x
             goal_y = chosen_frontier[0] * self.map_data.info.resolution + self.map_data.info.origin.position.y
 
+            if self.prev_goal is None:
+                self.prev_goal = (goal_x, goal_y)
+
             # Navigate to the chosen frontier once goal is reached or after 10 seconds
             if self.flag or time.time() - self.time > 10:
+                if self.prev_goal == (goal_x, goal_y):
+                    self.get_logger().info("Already at the chosen frontier, looking for another one...")
+                    self.visited_frontiers.add(chosen_frontier)  # Mark this frontier as visited
+                    return
+                else:
+                    self.prev_goal = (goal_x, goal_y)
                 self.navigate_to(goal_x, goal_y)
                 self.flag = False
                 self.time = time.time()
-
+            
             return
 
     # def shudown_robot(self):

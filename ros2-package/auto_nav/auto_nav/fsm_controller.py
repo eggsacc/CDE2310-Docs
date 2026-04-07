@@ -3,6 +3,11 @@ from rclpy.node import Node
 from std_msgs.msg import String, Int32
 from geometry_msgs.msg import PoseStamped
 
+# TF2 imports
+from tf2_ros import TransformException
+from tf2_ros.buffer import Buffer
+from tf2_ros.transform_listener import TransformListener
+
 class FSMNode(Node):
     def __init__(self):
         super().__init__('fsm_controller')
@@ -27,16 +32,21 @@ class FSMNode(Node):
         self.dock_attempts = 0
         self.max_dock_attempts = 2
 
+        # ================= TF2 SETUP =================
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
+        self.last_detected_marker = None
+
         # ================= PUBLISHERS =================
         self.state_pub = self.create_publisher(String, '/states', 10)
         self.current_marker_pub = self.create_publisher(Int32, '/current_marker', 10)
 
         # ================= SUBSCRIBERS =================
-        self.create_subscription(PoseStamped, '/aruco_pose', self.aruco_callback, 10)
         self.create_subscription(String, '/operation_status', self.status_callback, 10)
 
         # ================= TIMER =================
         self.timer = self.create_timer(0.1, self.state_machine_loop)
+        self.marker_check_timer = self.create_timer(0.5, self.check_for_markers)
 
         self.get_logger().info("FSM Controller Started")
         self.change_state("EXPLORE")
@@ -66,8 +76,7 @@ class FSMNode(Node):
         if self.state == "EXPLORE":
             if self.marker_detected:
                 self.marker_detected = False
-                if self.current_marker:
-                    self.marker_id = int(self.current_marker.header.frame_id.split("_")[-1])
+                if self.marker_id is not None:
                     self.change_state("DOCK", self.marker_id)
 
             elif self.map_explored and self.marker_count >= self.required_markers:
@@ -81,6 +90,10 @@ class FSMNode(Node):
 
         elif self.state == "END":
             self.get_logger().info("Mission Complete! Goodbye!")
+        
+        self.state_pub.publish(String(data=self.state))  # Publish current state at the end of each loop
+
+        
 
     # ================= ERROR HANDLER =================
     def handle_error(self):
@@ -99,7 +112,7 @@ class FSMNode(Node):
 
             else:
                 self.get_logger().error("Dock failed twice → giving up")
-                self.change_state("END")
+                self.change_state("EXPLORE")
 
         elif self.error_type == "TIMEOUT":
             self.get_logger().warn("Dock timeout → proceeding to launch")
@@ -133,17 +146,54 @@ class FSMNode(Node):
         self.error_type = None
 
     # ================= CALLBACKS =================
+    def check_for_markers(self):
+        """Check TF tree for aruco markers"""
+        if self.state != "EXPLORE":
+            return
+
+        try:
+            # Get all frames in the tf tree
+            frames = self.tf_buffer.all_frames_as_string()
+            
+            # Look for aruco marker frames (named like "aruco_marker_0", "aruco_marker_1", etc.)
+            import re
+            marker_frames = re.findall(r'aruco_marker_(\d+)', frames)
+            
+            if marker_frames:
+                for marker_id_str in marker_frames:
+                    marker_id = int(marker_id_str)
+                    marker_frame = f"aruco_marker_{marker_id}"
+                    
+                    try:
+                        # Try to get transform from robot base to marker
+                        transform = self.tf_buffer.lookup_transform(
+                            "base_link",
+                            marker_frame,
+                            rclpy.time.Time()
+                        )
+                        
+                        # Marker is visible
+                        if self.last_detected_marker != marker_id:
+                            self.get_logger().info(f"Marker {marker_id} Detected via TF")
+                            self.marker_detected = True
+                            self.marker_id = marker_id
+                            self.last_detected_marker = marker_id
+                            
+                            marker_msg = Int32()
+                            marker_msg.data = self.marker_id
+                            self.current_marker_pub.publish(marker_msg)
+                            break
+                    except TransformException:
+                        continue
+            else:
+                self.last_detected_marker = None
+                
+        except Exception as e:
+            self.get_logger().debug(f"Error checking markers: {e}")
+
     def aruco_callback(self, msg):
-        if self.state == "EXPLORE":
-            self.get_logger().info("Marker Detected")
-            self.marker_detected = True
-
-            self.current_marker = msg
-            self.marker_id = int(self.current_marker.header.frame_id.split("_")[-1])
-
-            marker_msg = Int32()
-            marker_msg.data = self.marker_id
-            self.current_marker_pub.publish(marker_msg)
+        # This callback is now deprecated, but keeping for reference
+        pass
 
     def status_callback(self, msg):
         status = msg.data
