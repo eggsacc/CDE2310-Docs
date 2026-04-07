@@ -7,17 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-> Changes that have been merged into the repository but not yet tagged with a version number.
-> Add new entries here as you develop. When ready to release, rename this section to the new
-> version (e.g., `## [1.1.0] - YYYY-MM-DD`) and create a fresh `[Unreleased]` section above it.
+## [1.0.0] - 2026-04-07
+
+**First full major release.** The system is now capable of executing the complete mission end-to-end: autonomous exploration and mapping, docking to ArUco markers, and payload delivery. All core subsystems are operational and integrated. Known issues and edge cases remain but do not prevent mission execution.
 
 ### Added
 
-- Modified exploration code to cancel goal when fsm_status is not "EXPLORE"
-- Modified FSM code to account for TIMEOUT status
-- Tuned docking node parameters (standoff distances, tolerances, velocity limits) to improve final alignment accuracy
-- Moved all ros2 packages and firmware code under software
-- Added arduino launcher control firmware
+- Full stack FSM, navigation, docking and launch ROS2 package with complete mission capability
+- 40-second timeout on docking Phase 1 to prevent excessive navigation time
+- Tuned docking parameters (standoff distances, tolerances, velocity limits) for improved alignment
+- Tuned navigation parameters for better exploration 
+- Updated FSM for full ROS 2 integration with coordinated multi-stage mission control
 
 ### Removed
 
@@ -38,5 +38,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - RPi-based ArUco marker detection with TF transform broadcasting 
 - RPi-based servo and solenoid actuation triggered by LIDAR proximity 
 
-[unreleased]: https://github.com/eggsacc/CDE2310-Docs/compare/v0.1.0...HEAD
+[unreleased]: https://github.com/eggsacc/CDE2310-Docs/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/eggsacc/CDE2310-Docs/releases/tag/v1.0.0
 [0.1.0]: https://github.com/eggsacc/CDE2310-Docs/releases/tag/v0.1.0

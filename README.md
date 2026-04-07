@@ -1,6 +1,6 @@
 # CDE2310 AY2526 S2 Group 5 
 [![ROS 2](https://img.shields.io/badge/ROS2-Humble-blue)](https://docs.ros.org/en/humble/)
-[![Version](https://img.shields.io/badge/version-0.1.0-green)]()
+[![Version](https://img.shields.io/badge/version-1.0.0-green)](https://github.com/eggsacc/CDE2310-Docs/releases/tag/v1.0.0)
 [![License](https://img.shields.io/badge/license-MIT-lightgrey)]()
 
 ## Mission Overview
