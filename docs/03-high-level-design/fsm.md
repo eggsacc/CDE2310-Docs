@@ -20,12 +20,15 @@ Unlike a fixed-state FSM (e.g., DOCK_A, DOCK_B), this implementation dynamically
 ### INIT
 System startup and initialization of all ROS2 nodes.
 
+---
+
 ### EXPLORE
 Robot performs exploration (e.g., frontier-based with Nav2) while searching for ArUco markers.
 
 - Subscribes to `/aruco_pose`
 - Detects markers and extracts marker ID
-- Transitions when a marker is detected
+- Publishes marker ID on `/current_marker`
+- Transitions to docking when a marker is detected
 
 ---
 
@@ -35,13 +38,14 @@ Robot docks at the detected station using the ArUco marker.
 - Triggered dynamically (e.g., `DOCK_3`, `DOCK_5`)
 - Docking handled by `docking_node`
 - Uses TF + LIDAR-based multi-phase docking
+- FSM tracks docking attempts for fault tolerance
 
 ---
 
 ### LAUNCH_<marker_id>
 Robot performs payload delivery (e.g., launching ping pong balls).
 
-- Triggered after successful docking
+- Triggered after docking completes or times out
 - Marker ID is preserved (e.g., `LAUNCH_3`)
 - On completion, increments delivered marker count
 
@@ -69,9 +73,14 @@ Mission complete. Robot stops all operations.
 The FSM incorporates fault handling using `/operation_status`.
 
 #### Docking Failures
-- `DOCK_FAIL` or `TIMEOUT`:
+- `DOCK_FAIL`:
   - Retry docking **once**
   - If failure occurs twice → transition to `END`
+
+#### Docking Timeout
+- `TIMEOUT`:
+  - Assumed robot is sufficiently aligned
+  - FSM proceeds directly to `LAUNCH_<id>`
 
 #### Navigation Failures
 - `NAV_FAIL`:
@@ -79,7 +88,7 @@ The FSM incorporates fault handling using `/operation_status`.
 
 #### Launch Failures
 - `LAUNCH_FAIL`:
-  - Retry launch
+  - Retry launch in the same state
 
 #### Marker Loss
 - `MARKER_LOST`:
@@ -127,8 +136,9 @@ The FSM incorporates fault handling using `/operation_status`.
 - Simplifies debugging and integration
 
 ### Fault-Tolerant Execution
-- Automatic recovery behaviors
-- Controlled retry logic (no infinite loops)
+- Controlled retry logic for docking
+- Graceful fallback on timeout
+- No infinite retry loops
 
 ### Decoupled Architecture
 - FSM = decision-making layer
@@ -138,4 +148,4 @@ The FSM incorporates fault handling using `/operation_status`.
 
 ## Summary
 
-The FSM provides a robust, scalable, and modular control architecture for autonomous mission execution. By combining dynamic state representation, centralized communication, and fault handling, the system achieves reliable operation in uncertain environments.
+The FSM provides a robust, scalable, and modular control architecture for autonomous mission execution. By combining dynamic state representation, centralized communication, and fault handling—including retry logic and timeout-based fallback—the system achieves reliable operation in uncertain environments.
