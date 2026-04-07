@@ -23,13 +23,13 @@ class FSMNode(Node):
         self.error_detected = False
         self.error_type = None
 
-        # 🔴 Dock retry logic
+        # Dock retry logic
         self.dock_attempts = 0
         self.max_dock_attempts = 2
 
         # ================= PUBLISHERS =================
         self.state_pub = self.create_publisher(String, '/states', 10)
-        self.current_marker_pub = self.create_publisher(Int32,'/current_marker', 10)
+        self.current_marker_pub = self.create_publisher(Int32, '/current_marker', 10)
 
         # ================= SUBSCRIBERS =================
         self.create_subscription(PoseStamped, '/aruco_pose', self.aruco_callback, 10)
@@ -86,7 +86,7 @@ class FSMNode(Node):
     def handle_error(self):
         self.get_logger().error(f"Handling error: {self.error_type}")
 
-        if self.error_type in ["DOCK_FAIL", "TIMEOUT"]:
+        if self.error_type == "DOCK_FAIL":
             self.dock_attempts += 1
 
             if self.dock_attempts < self.max_dock_attempts:
@@ -101,6 +101,17 @@ class FSMNode(Node):
                 self.get_logger().error("Dock failed twice → giving up")
                 self.change_state("END")
 
+        elif self.error_type == "TIMEOUT":
+            self.get_logger().warn("Dock timeout → proceeding to launch")
+
+            # Reset attempts since we proceed forward
+            self.dock_attempts = 0
+
+            if self.marker_id is not None:
+                self.change_state("LAUNCH", self.marker_id)
+            else:
+                self.change_state("LAUNCH")
+
         elif self.error_type == "NAV_FAIL":
             self.get_logger().warn("Navigation failed → return to explore")
             self.change_state("EXPLORE")
@@ -111,4 +122,64 @@ class FSMNode(Node):
             if self.marker_id is not None:
                 self.change_state("LAUNCH", self.marker_id)
             else:
-                self.change
+                self.change_state("LAUNCH")
+
+        else:
+            self.get_logger().fatal("Unknown error → stopping mission")
+            self.change_state("END")
+
+        # ✅ Reset error flags (CRITICAL)
+        self.error_detected = False
+        self.error_type = None
+
+    # ================= CALLBACKS =================
+    def aruco_callback(self, msg):
+        if self.state == "EXPLORE":
+            self.get_logger().info("Marker Detected")
+            self.marker_detected = True
+
+            self.current_marker = msg
+            self.marker_id = int(self.current_marker.header.frame_id.split("_")[-1])
+
+            marker_msg = Int32()
+            marker_msg.data = self.marker_id
+            self.current_marker_pub.publish(marker_msg)
+
+    def status_callback(self, msg):
+        status = msg.data
+        self.get_logger().info(f"Status received: {status}")
+
+        # ================= SUCCESS CASES =================
+        if status == "DOCK_DONE" and self.state == "DOCK":
+            self.get_logger().info("Docking completed")
+
+            self.dock_attempts = 0  # ✅ reset attempts
+
+            self.current_marker = None
+            self.change_state("LAUNCH", self.marker_id)
+
+        elif status == "LAUNCH_DONE" and self.state == "LAUNCH":
+            self.get_logger().info("Launch completed")
+            self.marker_count += 1
+            self.change_state("EXPLORE")
+
+        elif status == "MAP_DONE" and self.state == "EXPLORE":
+            self.get_logger().info("Map exploration completed")
+            self.map_explored = True
+
+        # ================= ERROR CASES =================
+        elif status in ["DOCK_FAIL", "LAUNCH_FAIL", "NAV_FAIL", "MARKER_LOST", "TIMEOUT"]:
+            self.error_detected = True
+            self.error_type = status
+
+
+# ================= MAIN =================
+def main(args=None):
+    rclpy.init(args=args)
+    node = FSMNode()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
+
+if __name__ == "__main__":
+    main()
