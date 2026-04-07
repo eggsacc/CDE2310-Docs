@@ -56,7 +56,7 @@ class ExplorerNode(Node):
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
         self.timer = self.create_timer(0.5, self.get_robot_pose)
-        
+        self.timer = self.create_timer(0.1, self.store_aruco_marker_location)
 
         # Publisher for rotation
         self.publisher_ = self.create_publisher(Twist,'cmd_vel',10)
@@ -72,6 +72,8 @@ class ExplorerNode(Node):
         # Map and position data
         self.map_data = None
         self.robot_position = (0, 0)  # Placeholder, update from localization
+
+        
 
         
         # Timer for periodic exploration
@@ -136,6 +138,67 @@ class ExplorerNode(Node):
             return None
         except Exception:
             return None
+
+    def store_aruco_marker_location(self, marker_id=None):
+        """
+        Check if an aruco marker TF transform exists and store its map location.
+        If marker_id is None, checks all available aruco markers.
+        Returns list of stored marker locations: [(marker_id, x, y, z), ...]
+        """
+        import re
+        
+        if not hasattr(self, 'aruco_marker_locations'):
+            self.aruco_marker_locations = []
+        
+        try:
+            frames = self.tf_buffer.all_frames_as_string()
+            
+            if marker_id is not None:
+                # Check specific marker
+                marker_frame = f"aruco_marker_{marker_id}"
+                if marker_frame in frames:
+                    try:
+                        trans = self.tf_buffer.lookup_transform('map', marker_frame, rclpy.time.Time())
+                        x = trans.transform.translation.x
+                        y = trans.transform.translation.y
+                        z = trans.transform.translation.z
+                        
+                        # Check if this marker location is already stored
+                        if not any(loc[0] == marker_id for loc in self.aruco_marker_locations):
+                            self.aruco_marker_locations.append((marker_id, x, y, z))
+                            self.get_logger().info(f"Stored Aruco Marker {marker_id} at map location: ({x:.2f}, {y:.2f}, {z:.2f})")
+                        
+                        return self.aruco_marker_locations
+                    except TransformException as e:
+                        self.get_logger().debug(f"Could not get transform for marker {marker_id}: {e}")
+                        return self.aruco_marker_locations
+            else:
+                # Check all available aruco markers
+                marker_frames = re.findall(r'aruco_marker_(\d+)', frames)
+                
+                for marker_id_str in marker_frames:
+                    marker_id = int(marker_id_str)
+                    marker_frame = f"aruco_marker_{marker_id}"
+                    
+                    try:
+                        trans = self.tf_buffer.lookup_transform('map', marker_frame, rclpy.time.Time())
+                        x = trans.transform.translation.x
+                        y = trans.transform.translation.y
+                        z = trans.transform.translation.z
+                        
+                        # Check if this marker location is already stored
+                        if not any(loc[0] == marker_id for loc in self.aruco_marker_locations):
+                            self.aruco_marker_locations.append((marker_id, x, y, z))
+                            self.get_logger().info(f"Stored Aruco Marker {marker_id} at map location: ({x:.2f}, {y:.2f}, {z:.2f})")
+                    
+                    except TransformException:
+                        continue
+                
+                return self.aruco_marker_locations
+        
+        except Exception as e:
+            self.get_logger().error(f"Error storing aruco marker locations: {e}")
+            return self.aruco_marker_locations
 
     def map_callback(self, msg):
         self.map_data = msg
