@@ -141,6 +141,7 @@ class DockingNode(Node):
         self.goal_odom_y = None
         self.goal_odom_yaw = None
         self.goal_computed = False
+        self.phase1_start_time = None
 
         # Phase 2: EMA filters and flip detection state
         self.pos_filter = None
@@ -171,6 +172,7 @@ class DockingNode(Node):
         self.declare_parameter("max_angular", 0.05)           # Max rotation velocity (rad/s)
         self.declare_parameter("min_angular", 0.01)          # Deadband floor for rotation commands (rad/s)
         self.declare_parameter("recovery_spin_speed", 0.1)    # Recovery spin angular velocity (rad/s)
+        self.declare_parameter("phase1_timeout_sec", 40.0)    # Phase 1 timeout (s)
         self.declare_parameter("timeout_sec", 120.0)          # Safety abort timer (s)
         self.declare_parameter("verbose", False)             # Enable debug logging
         self._load_params()
@@ -194,6 +196,7 @@ class DockingNode(Node):
         self.max_angular = g("max_angular").value
         self.min_angular = g("min_angular").value
         self.recovery_spin_speed = g("recovery_spin_speed").value
+        self.phase1_timeout_sec = g("phase1_timeout_sec").value
         self.timeout_sec = g("timeout_sec").value
         self.verbose = g("verbose").value
 
@@ -267,6 +270,7 @@ class DockingNode(Node):
         self.consecutive_misses = 0
         self.aligned_iterations = 0
         self.goal_computed = False
+        self.phase1_start_time = self.get_clock().now()
         self.pos_filter = LowPassFilter(self.lpf_alpha)
         self.normal_filter = LowPassFilter(self.lpf_alpha)
         self.prev_normal = None
@@ -434,6 +438,16 @@ class DockingNode(Node):
         """Navigate to 35cm standoff via odom, then rotate to face marker.
         First call computes goal from a single TF lookup. Subsequent
         calls drive toward the odom-frame goal with P-control."""
+
+        # Check Phase 1 timeout
+        if self.phase1_start_time is not None:
+            elapsed = (self.get_clock().now() - self.phase1_start_time).nanoseconds / 1e9
+            if elapsed > self.phase1_timeout_sec:
+                self.get_logger().warn(
+                    f"Phase 1 timeout exceeded ({elapsed:.1f}s > {self.phase1_timeout_sec}s)")
+                self.cmd_pub.publish(Twist())
+                self._finish_docking("TIMEOUT")
+                return
 
         # Compute odom goal on first iteration
         if not self.goal_computed:
@@ -714,6 +728,7 @@ class DockingNode(Node):
         self.consecutive_misses = 0
         self.aligned_iterations = 0
         self.goal_computed = False
+        self.phase1_start_time = None
         self.recovery_spin_active = False
         self.recovery_spin_prev_yaw = None
         self.recovery_spin_cumulative = 0.0
