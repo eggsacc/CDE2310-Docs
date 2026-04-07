@@ -29,6 +29,7 @@ setup(
             'exploration = auto_nav.exploration:main',
             'fsm_controller = auto_nav.fsm_controller:main',
             'docking = auto_nav.docking:main',
+            'mainlaunch = auto_nav.mainlaunch:main'
         ],
     },
 )

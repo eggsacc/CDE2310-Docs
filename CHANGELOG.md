@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Add new entries here as you develop. When ready to release, rename this section to the new
 > version (e.g., `## [1.1.0] - YYYY-MM-DD`) and create a fresh `[Unreleased]` section above it.
 - Modified FSM code to account for TIMEOUT status
+- fixing logical issues with fsm and exploration nodes
 
 ## [0.1.0] - 2026-04-06
 
