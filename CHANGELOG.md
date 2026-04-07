@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Modified exploration code to cancel goal when fsm_status is not "EXPLORE"
 - Modified FSM code to account for TIMEOUT status
 - Tuned docking node parameters (standoff distances, tolerances, velocity limits) to improve final alignment accuracy
+- Moved all ros2 packages and firmware code under software
+- Added arduino launcher control firmware
 
 ### Removed
 
