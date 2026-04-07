@@ -28,44 +28,60 @@ The main objective of this project is to design, create and validate an autonomo
 ## Repository Structure
 
 ```
-.
-├── README.md                   ← you are here
-├── CHANGELOG.md                ← version history (SemVer)
+├── README.md ← you are here
+├── CHANGELOG.md ← version history (SemVer)
 ├── .gitignore
+├── remote-pc-codebase/ ← Software environment setup guide
+├── docs/ ← Part 1: Systems Design Documents (SDD)
+│ ├── 01-requirements/
+│ ├── 02-con-ops/
+│ ├── 03-high-level-design/
+│ ├── 04-subsystem-design/
+│ │ ├── software.md
+│ │ ├── hardware.md
+│ │ └── electronics.md
+│ ├── 05-icd/
+│ ├── 06-sw-firmware/
+│ ├── 07-testing/
+│ ├── 08-user-manual/
+│ └── 09-application-notes/
 │
-├── docs/                       ← Part 1: Systems Design Documents (SDD)
-│   ├── 01-requirements/
-│   ├── 02-con-ops/
-│   ├── 03-high-level-design/
-│   ├── 04-subsystem-design/
-│   │   ├── software.md
-│   │   ├── hardware.md
-│   │   └── electronics.md
-│   ├── 05-icd/                 ← config-controlled; changes require a Change Request
-│   ├── 06-sw-firmware/
-│   ├── 07-testing/
-│   ├── 08-user-manual/
-│   └── 09-application-notes/
-│
-├── end-user-doc/               ← Part 2: Printed end-user documentation (5-page max)
-│
-├── ros2_ws/                    ← ROS 2 workspace
-│   └── src/
-│       └── g2_turtlebot/
-│           ├── package.xml
-│           ├── setup.py
-│           ├── launch/
-│           ├── g2_turtlebot/
-│           └── config/
+├── end-user-doc/
+├── ros2-package/
+│ ├── auto_nav/
+│ │ ├── auto_nav/
+│ │ ├── launch/
+│ │ │ └── auto_nav_launch.py
+│ │ ├── resource/
+│ │ ├── test/
+│ │ ├── package.xml
+│ │ ├── setup.cfg
+│ │ └── setup.py
+│ └── rpi/
+│ ├── aruco_detector/
+│ │ ├── aruco_detector/
+│ │ ├── resource/
+│ │ ├── test/
+│ │ ├── package.xml
+│ │ ├── setup.cfg
+│ │ └── setup.py
+│ └── lidar_servo/
+│ ├── lidar_servo/
+│ ├── resource/
+│ ├── test/
+│ ├── LICENSE
+│ ├── package.xml
+│ ├── setup.cfg
+│ └── setup.py
 │
 ├── hardware/
-│   ├── bom/
-│   ├── cad/
-│   └── assembly-notes.md
+│ ├── bom/
+│ ├── cad/
+│ └── assembly-notes.md
 │
 └── electronics/
-    ├── schematics/
-    └── wiring-notes.md
+├── schematics/
+└── wiring-notes.md
 ```
 
 ---
@@ -76,8 +92,8 @@ The main objective of this project is to design, create and validate an autonomo
 |--------|------|--------|
 | Member A | Software lead (ROS 2, SLAM, navigation) | @username |
 | Wang yizhang | Hardware lead (payload mechanism) | @eggsacc |
-| Member C | Electronics lead (wiring, power, sensors) | @username |
-| Member D | Systems lead (SDD, ICD, testing, integration) | @username |
+| Gregorius Nicholas Sutedja | Electronics lead (wiring, power, sensors) | @Nikidudu |
+| Garg Divyansh | Systems lead (SDD, ICD, testing, integration) | @garg-divyansh |
 
 ---
 
