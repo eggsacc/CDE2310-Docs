@@ -95,11 +95,11 @@ class FSMNode(Node):
     
     def getLaunchState(self):
         if self.marker_id == 1:
-            return "LAUNCH_STATIC"
+            return "STATIC_LAUNCH"
         elif self.marker_id == 2:
-            return "LAUNCH_DYNAMIC"
+            return "DYNAMIC_LAUNCH"
         else:
-            return "LAUNCH"
+            return "STATIC_LAUNCH"
 
     # ================= ERROR HANDLER =================
     def handle_error(self):
