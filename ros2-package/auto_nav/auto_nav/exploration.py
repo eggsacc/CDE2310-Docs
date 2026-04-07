@@ -184,6 +184,36 @@ class ExplorerNode(Node):
             self.get_logger().error(f"Navigation failed: {e}")
 
 
+    def find_walls(self, map_array, wall_threshold=50):
+        """
+        Identify wall cells in the occupancy grid.
+        Wall cells are occupied cells (value >= wall_threshold).
+        """
+        walls = []
+        rows, cols = map_array.shape
+        
+        for r in range(rows):
+            for c in range(cols):
+                if map_array[r, c] >= wall_threshold:
+                    walls.append((r, c))
+        
+        return walls
+
+    def distance_to_nearest_wall(self, frontier, walls):
+        """
+        Calculate the minimum distance from a frontier cell to the nearest wall.
+        Returns distance in cells (can be converted to meters by multiplying by resolution).
+        """
+        if not walls:
+            return float('inf')
+        
+        min_distance = float('inf')
+        for wall in walls:
+            distance = np.sqrt((frontier[0] - wall[0])**2 + (frontier[1] - wall[1])**2)
+            min_distance = min(min_distance, distance)
+        
+        return min_distance
+
     def find_frontiers(self, map_array):
         """
         Detect frontiers in the occupancy grid map.
@@ -216,15 +246,21 @@ class ExplorerNode(Node):
         # self.get_logger().info(f"Found {len(frontiers)} frontiers")
         return frontiers
 
-    def choose_frontier(self, frontiers):
+    def choose_frontier(self, frontiers, map_array):
         """
         Choose the closest frontier to the robot that has more than 5 neighboring frontiers.
+        Filters out frontiers that are too close to walls.
         """
         robot_x, robot_y = self.robot_position
         self.get_logger().info(f"Robot position: {self.robot_position}")
         
         neighbor_threshold = 0.5  # Distance in meters to consider frontiers as neighbors
         min_neighbors_required = 5  # Minimum neighbors required
+        wall_distance_threshold = 5  # Minimum distance from walls in cells (multiply by resolution for meters)
+        
+        # Find all walls in the map
+        walls = self.find_walls(map_array, wall_threshold=50)
+        self.get_logger().info(f"Found {len(walls)} wall cells")
         
         # Calculate neighbor count and distance for each frontier
         frontier_scores = []
@@ -239,6 +275,12 @@ class ExplorerNode(Node):
             distance_to_robot = np.sqrt((robot_x - position_x)**2 + (robot_y - position_y)**2)
             
             if distance_to_robot < 0.5:  # Skip frontiers too close to robot
+                continue
+            
+            # Check distance to nearest wall
+            wall_distance = self.distance_to_nearest_wall(frontier, walls)
+            if wall_distance < wall_distance_threshold:
+                # Skip frontiers too close to walls
                 continue
             
             # Count neighboring frontiers (clustering)
@@ -256,20 +298,20 @@ class ExplorerNode(Node):
             
             # Only add frontier if it has more than min_neighbors_required neighbors
             if neighbor_count > min_neighbors_required:
-                frontier_scores.append((neighbor_count, distance_to_robot, frontier))
+                frontier_scores.append((neighbor_count, distance_to_robot, frontier, wall_distance))
         
         if not frontier_scores:
-            self.get_logger().warning(f"No frontier found with more than {min_neighbors_required} neighbors")
+            self.get_logger().warning(f"No frontier found with more than {min_neighbors_required} neighbors and far enough from walls")
             return None
         
         # Sort by distance (ascending) to get the closest one
         frontier_scores.sort(key=lambda x: x[1])
         
         chosen_frontier = frontier_scores[0][2]
-        neighbor_count, distance = frontier_scores[0][0], frontier_scores[0][1]
+        neighbor_count, distance, wall_distance = frontier_scores[0][0], frontier_scores[0][1], frontier_scores[0][3]
         
-        self.visited_frontiers.add(chosen_frontier)
-        self.get_logger().info(f"Chosen frontier: {chosen_frontier} with {neighbor_count} neighbors, distance: {distance:.2f}m")
+        # self.visited_frontiers.add(chosen_frontier)
+        self.get_logger().info(f"Chosen frontier: {chosen_frontier} with {neighbor_count} neighbors, distance: {distance:.2f}m, wall distance: {wall_distance*self.map_data.info.resolution:.2f}m")
 
         return chosen_frontier
 
@@ -299,7 +341,7 @@ class ExplorerNode(Node):
             #         return
 
             # Choose the closest frontier
-            chosen_frontier = self.choose_frontier(frontiers)
+            chosen_frontier = self.choose_frontier(frontiers, map_array)
 
             if not chosen_frontier:
                 self.get_logger().warning("No frontiers to explore")
