@@ -92,8 +92,14 @@ class FSMNode(Node):
             self.get_logger().info("Mission Complete! Goodbye!")
         
         self.state_pub.publish(String(data=self.state))  # Publish current state at the end of each loop
-
-        
+    
+    def getLaunchState(self):
+        if self.marker_id == 1:
+            return "LAUNCH_STATIC"
+        elif self.marker_id == 2:
+            return "LAUNCH_DYNAMIC"
+        else:
+            return "LAUNCH"
 
     # ================= ERROR HANDLER =================
     def handle_error(self):
@@ -121,9 +127,9 @@ class FSMNode(Node):
             self.dock_attempts = 0
 
             if self.marker_id is not None:
-                self.change_state("LAUNCH", self.marker_id)
+                self.change_state(self.getLaunchState())
             else:
-                self.change_state("LAUNCH")
+                self.change_state(self.getLaunchState())
 
         elif self.error_type == "NAV_FAIL":
             self.get_logger().warn("Navigation failed → return to explore")
@@ -133,9 +139,9 @@ class FSMNode(Node):
             self.get_logger().warn("Launch failed → retry launch")
 
             if self.marker_id is not None:
-                self.change_state("LAUNCH", self.marker_id)
+                self.change_state(self.getLaunchState())
             else:
-                self.change_state("LAUNCH")
+                self.change_state(self.getLaunchState())
 
         else:
             self.get_logger().fatal("Unknown error → stopping mission")
@@ -206,7 +212,7 @@ class FSMNode(Node):
             self.dock_attempts = 0  # ✅ reset attempts
 
             self.current_marker = None
-            self.change_state("LAUNCH", self.marker_id)
+            self.change_state(self.getLaunchState())
 
         elif status == "LAUNCH_DONE" and self.state == "LAUNCH":
             self.get_logger().info("Launch completed")
