@@ -153,7 +153,7 @@ class FSMNode(Node):
 
     # ================= CALLBACKS =================
     def check_for_markers(self):
-        """Check TF tree for aruco markers"""
+        """Check TF tree for aruco markers and distance threshold"""
         if self.state != "EXPLORE":
             return
 
@@ -163,6 +163,7 @@ class FSMNode(Node):
             
             # Look for aruco marker frames (named like "aruco_marker_0", "aruco_marker_1", etc.)
             import re
+            import math
             marker_frames = re.findall(r'aruco_marker_(\d+)', frames)
             
             if marker_frames:
@@ -178,17 +179,32 @@ class FSMNode(Node):
                             rclpy.time.Time()
                         )
                         
-                        # Marker is visible
-                        if self.last_detected_marker != marker_id:
-                            self.get_logger().info(f"Marker {marker_id} Detected via TF")
-                            self.marker_detected = True
-                            self.marker_id = marker_id
-                            self.last_detected_marker = marker_id
+                        # Calculate XY distance from robot to marker (excluding height)
+                        tx = transform.transform.translation.x
+                        ty = transform.transform.translation.y
+                        distance = math.sqrt(tx**2 + ty**2)
+                        
+                        self.get_logger().info(f"Marker {marker_id} detected at distance: {distance:.2f}m")
+                        
+                        # Check if marker is within 50cm (0.5m) threshold
+                        distance_threshold = 0.5  # 50cm
+                        
+                        if distance < distance_threshold:
+                            # Marker is close enough - trigger docking
+                            if self.last_detected_marker != marker_id:
+                                self.get_logger().info(f"Marker {marker_id} within threshold ({distance:.2f}m < {distance_threshold}m) → Initiating dock")
+                                self.marker_detected = True
+                                self.marker_id = marker_id
+                                self.last_detected_marker = marker_id
+                                
+                                marker_msg = Int32()
+                                marker_msg.data = self.marker_id
+                                self.current_marker_pub.publish(marker_msg)
+                                break
+                        else:
+                            # Marker detected but too far - continue exploring
+                            self.get_logger().debug(f"Marker {marker_id} detected but too far ({distance:.2f}m >= {distance_threshold}m) → Continue exploring")
                             
-                            marker_msg = Int32()
-                            marker_msg.data = self.marker_id
-                            self.current_marker_pub.publish(marker_msg)
-                            break
                     except TransformException:
                         continue
             else:
