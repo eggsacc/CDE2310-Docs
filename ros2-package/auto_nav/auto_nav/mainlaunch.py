@@ -14,12 +14,14 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 
 # List of Python modules/scripts to launch
+# Format: (node_name, command, show_logs)
+# Set show_logs=True to see console output for that node
 NODES_TO_LAUNCH = [
-    ("FSM Controller", "ros2 run auto_nav fsm_controller"),
-    ("Docking", "ros2 run auto_nav docking"),
-    ("Cartographer", "ros2 launch turtlebot3_cartographer cartographer.launch.py"),
-    ("Navigation", "ros2 launch turtlebot3_navigation2 navigation2.launch.py"),
-    ("Exploration", "ros2 run auto_nav exploration"),
+    ("FSM Controller", "ros2 run auto_nav fsm_controller", True),
+    ("Docking", "ros2 run auto_nav docking --ros-args -p verbose:=True", True),
+    ("Cartographer", "ros2 launch turtlebot3_cartographer cartographer.launch.py", False),
+    ("Navigation", "ros2 launch turtlebot3_navigation2 navigation2.launch.py", False),
+    ("Exploration", "ros2 run auto_nav exploration", True),  # Show logs for exploration
     # Add more nodes as needed, uncomment or add new ones
 ]
 
@@ -45,16 +47,23 @@ def launch_nodes():
     print("Starting auto_nav nodes...")
     print("=" * 50)
 
-    for node_name, command in NODES_TO_LAUNCH:
+    for node_name, command, show_logs in NODES_TO_LAUNCH:
         try:
             print(f"Launching: {node_name}")
-            process = subprocess.Popen(
-                command,
-                shell=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
-            )
+            if show_logs:
+                # Show console output
+                process = subprocess.Popen(
+                    command,
+                    shell=True
+                )
+            else:
+                # Suppress console output
+                process = subprocess.Popen(
+                    command,
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE
+                )
             processes.append(process)
             print(f"✓ {node_name} started (PID: {process.pid})")
         except Exception as e:
@@ -76,9 +85,14 @@ def launch_nodes():
         signal_handler(None, None)
 
 
-if __name__ == "__main__":
+def main():
+    """Main entry point for ROS2"""
     # Set up signal handler for graceful shutdown
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
     launch_nodes()
+
+
+if __name__ == "__main__":
+    main()
