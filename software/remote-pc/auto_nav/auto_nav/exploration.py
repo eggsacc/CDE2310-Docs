@@ -114,14 +114,18 @@ class ExplorerNode(Node):
             self.status_flag = True
             self.target_marker = None  # Normal frontier exploration
             # self.get_logger().info("Status set to EXPLORE")
+        elif msg.data == "EXPLORE_0": 
+            self.status_flag = True
+            self.target_marker = 0  # Normal frontier exploration
+            # self.get_logger().info("Status set to EXPLORE")
         elif msg.data == "EXPLORE_1":
             self.status_flag = True
             self.target_marker = 1  # Navigate to marker 1
-            self.get_logger().info("Status set to EXPLORE_1 - targeting marker 1")
+            # self.get_logger().info("Status set to EXPLORE_1 - targeting marker 1")
         elif msg.data == "EXPLORE_2":
             self.status_flag = True
             self.target_marker = 2  # Navigate to marker 2
-            self.get_logger().info("Status set to EXPLORE_2 - targeting marker 2")
+            # self.get_logger().info("Status set to EXPLORE_2 - targeting marker 2")
         else:
             self.status_flag = False
             self.target_marker = None
@@ -154,8 +158,7 @@ class ExplorerNode(Node):
     def store_aruco_marker_location(self, marker_id=None):
         """
         Check if an aruco marker TF transform exists and store its map location.
-        If marker_id is None, checks all available aruco markers.
-        Returns dict of stored marker locations: {marker_id: (x, y, z), ...}
+        Stores full pose: (x, y, z, qx, qy, qz, qw)
         """
         import re
         
@@ -163,46 +166,47 @@ class ExplorerNode(Node):
             frames = self.tf_buffer.all_frames_as_string()
             
             if marker_id is not None:
-                # Check specific marker
                 marker_frame = f"aruco_marker_{marker_id}"
                 if marker_frame in frames:
                     try:
                         trans = self.tf_buffer.lookup_transform('map', marker_frame, rclpy.time.Time())
-                        x = trans.transform.translation.x
-                        y = trans.transform.translation.y
-                        z = trans.transform.translation.z
-                        
-                        # Store or update marker location
-                        self.aruco_marker_locations[marker_id] = (x, y, z)
-                        self.get_logger().info(f"Stored Aruco Marker {marker_id} at map location: ({x:.2f}, {y:.2f}, {z:.2f})")
-                        
-                        return self.aruco_marker_locations
+                        x  = trans.transform.translation.x
+                        y  = trans.transform.translation.y
+                        z  = trans.transform.translation.z
+                        qx = trans.transform.rotation.x
+                        qy = trans.transform.rotation.y
+                        qz = trans.transform.rotation.z
+                        qw = trans.transform.rotation.w
+
+                        # Store full pose so we can reconstruct facing direction later
+                        self.aruco_marker_locations[marker_id] = (x, y, z, qx, qy, qz, qw)
+
                     except TransformException as e:
                         self.get_logger().debug(f"Could not get transform for marker {marker_id}: {e}")
-                        return self.aruco_marker_locations
+
             else:
-                # Check all available aruco markers
                 marker_frames = re.findall(r'aruco_marker_(\d+)', frames)
                 
                 for marker_id_str in marker_frames:
-                    marker_id = int(marker_id_str)
-                    marker_frame = f"aruco_marker_{marker_id}"
-                    
+                    mid = int(marker_id_str)
+                    marker_frame = f"aruco_marker_{mid}"
                     try:
                         trans = self.tf_buffer.lookup_transform('map', marker_frame, rclpy.time.Time())
-                        x = trans.transform.translation.x
-                        y = trans.transform.translation.y
-                        z = trans.transform.translation.z
-                        
-                        # Store or update marker location
-                        self.aruco_marker_locations[marker_id] = (x, y, z)
-                        self.get_logger().info(f"Stored Aruco Marker {marker_id} at map location: ({x:.2f}, {y:.2f}, {z:.2f})")
-                    
+                        x  = trans.transform.translation.x
+                        y  = trans.transform.translation.y
+                        z  = trans.transform.translation.z
+                        qx = trans.transform.rotation.x
+                        qy = trans.transform.rotation.y
+                        qz = trans.transform.rotation.z
+                        qw = trans.transform.rotation.w
+
+                        self.aruco_marker_locations[mid] = (x, y, z, qx, qy, qz, qw)
+
                     except TransformException:
                         continue
-                
-                return self.aruco_marker_locations
-        
+
+            return self.aruco_marker_locations
+
         except Exception as e:
             self.get_logger().error(f"Error storing aruco marker locations: {e}")
             return self.aruco_marker_locations
@@ -210,55 +214,38 @@ class ExplorerNode(Node):
     def map_callback(self, msg):
         self.map_data = msg
         # self.get_logger().info("Map received")
-
+    
     def navigate_to_marker(self):
-        """
-        Navigate to 10cm away from the target aruco marker (1 or 2).
-        The robot will stop 10cm away from the marker, positioned to face it.
-        """
-        # Navigate to the target marker set by status_callback (EXPLORE_1 or EXPLORE_2)
         target_marker = self.target_marker
-        
+
         if target_marker is None or target_marker not in self.aruco_marker_locations:
             return False
+
+        pose = self.aruco_marker_locations[target_marker]
+        marker_x, marker_y, marker_z, qx, qy, qz, qw = pose
+
+        # Use your existing euler_from_quaternion to get the marker's yaw
+        _, _, marker_yaw = euler_from_quaternion(qx, qy, qz, qw)
+
+        # +90° to go from red (X) axis to blue (Z) axis direction
+        facing_x = np.cos(marker_yaw + np.pi / 2)
+        facing_y = np.sin(marker_yaw + np.pi / 2)
         
-        target_location = self.aruco_marker_locations[target_marker]
-        
-        # Extract marker position (x, y, z) from map frame
-        marker_x, marker_y, marker_z = target_location
-        
-        # Get current robot position from localization
-        robot_x, robot_y = self.robot_position
-        
-        # Calculate displacement vector from robot to marker
-        # This vector points in the direction FROM robot TOWARDS marker
-        dx = marker_x - robot_x
-        dy = marker_y - robot_y
-        
-        # Calculate the Euclidean distance from robot to marker
-        distance = np.sqrt(dx**2 + dy**2)
-        
-        if distance < 0.01:  # Avoid division by zero (robot at marker location)
-            self.get_logger().warning("Robot at marker location")
-            return False
-        
-        # Normalize the direction vector to unit length (length = 1)
-        # norm_dx, norm_dy now represent direction from robot to marker
-        norm_dx = dx / distance
-        norm_dy = dy / distance
-        
-        # Calculate goal position: 10cm (0.1m) away from marker, facing towards marker
-        # We want the robot to stop BEFORE reaching the marker, so we move backward from marker
-        # Using negative normalization vector to move toward robot
-        goal_x = marker_x - norm_dx * 0.1
-        goal_y = marker_y - norm_dy * 0.1
-        
-        # Calculate yaw angle (direction robot should face towards marker)
-        # This is the angle from goal position toward marker position
-        # norm_dx, norm_dy is the direction from robot to marker, which is also the direction from goal to marker
-        yaw = np.arctan2(norm_dy, norm_dx)
-        
-        self.get_logger().info(f"Navigating to Marker {target_marker} at ({marker_x:.2f}, {marker_y:.2f}), stopping 10cm away at goal: ({goal_x:.2f}, {goal_y:.2f}), facing yaw: {np.degrees(yaw):.1f}°")
+        # Goal = 10cm out along the marker's facing direction
+        offset = 0.20
+        goal_x = marker_x + facing_x * offset
+        goal_y = marker_y + facing_y * offset
+
+        # Robot faces back toward the marker
+        yaw = np.arctan2(-facing_y, -facing_x)
+
+        self.get_logger().info(
+            f"Navigating to Marker {target_marker} | "
+            f"marker=({marker_x:.2f}, {marker_y:.2f}) | "
+            f"goal=({goal_x:.2f}, {goal_y:.2f}) | "
+            f"facing yaw={np.degrees(yaw):.1f}°"
+        )
+
         self.navigate_to(goal_x, goal_y, yaw)
         return True
 

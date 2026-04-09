@@ -24,6 +24,7 @@ class FSMNode(Node):
         self.map_explored = False
 
         self.marker_id = None
+        self.target_marker = None  # ✅ Lock onto one marker
 
         # Error handling
         self.error_detected = False
@@ -39,8 +40,6 @@ class FSMNode(Node):
         # ================= TF2 =================
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
-
-        self.last_detected_marker = None
 
         # ================= PUBLISHERS =================
         self.state_pub = self.create_publisher(String, '/states', 10)
@@ -59,12 +58,12 @@ class FSMNode(Node):
     # ================= STATE TRANSITION =================
     def change_state(self, new_state, marker_id=None):
         self.prev_state = self.state
-        self.state = new_state
+        self.state = f"{new_state}_{marker_id}" if marker_id is not None else new_state
 
         msg = String()
 
-        if new_state == "DOCK" and marker_id is not None:
-            msg.data = f"DOCK_{marker_id}"
+        if new_state in ["DOCK", "EXPLORE"] and marker_id is not None:
+            msg.data = f"{new_state}_{marker_id}"
         else:
             msg.data = new_state
 
@@ -90,6 +89,10 @@ class FSMNode(Node):
         elif self.state == "END":
             self.get_logger().info("Mission Complete!")
 
+        msg = String()
+        msg.data = self.state
+        self.state_pub.publish(msg)
+
     # ================= LAUNCH STATE HELPER =================
     def getLaunchState(self):
         if self.marker_id == 1:
@@ -113,11 +116,13 @@ class FSMNode(Node):
             else:
                 self.get_logger().warn("Dock failed twice → skip marker")
                 self.completed_markers.add(self.marker_id)
+                self.target_marker = None
                 self.change_state("EXPLORE")
 
         elif self.error_type == "TIMEOUT":
             self.get_logger().warn("Timeout → back to explore")
             self.dock_attempts = 0
+            self.target_marker = None
             self.change_state("EXPLORE")
 
         elif self.error_type == "LAUNCH_FAIL":
@@ -139,15 +144,15 @@ class FSMNode(Node):
     # ================= MARKER DETECTION =================
     def check_for_markers(self):
 
-        if self.state != "EXPLORE":
-            return
 
         try:
             frames = self.tf_buffer.all_frames_as_string()
             marker_ids = re.findall(r'aruco_marker_(\d+)', frames)
 
-            for marker_id_str in marker_ids:
+            detected_markers = []
 
+            # Collect visible markers
+            for marker_id_str in marker_ids:
                 marker_id = int(marker_id_str)
 
                 if marker_id in self.completed_markers:
@@ -164,31 +169,50 @@ class FSMNode(Node):
                     ty = transform.transform.translation.y
                     distance = math.sqrt(tx**2 + ty**2)
 
-                    threshold = 1.5
-
-                    # 🔍 FAR → EXPLORE_<id>
-                    if distance >= threshold:
-                        msg = String()
-                        msg.data = f"EXPLORE_{marker_id}"
-                        self.state_pub.publish(msg)
-
-                    # 📍 NEAR → DOCK
-                    else:
-                        if self.last_detected_marker != marker_id:
-                            self.get_logger().info(f"Marker {marker_id} within threshold → docking")
-
-                            self.marker_detected = True
-                            self.marker_id = marker_id
-                            self.last_detected_marker = marker_id
-
-                            marker_msg = Int32()
-                            marker_msg.data = marker_id
-                            self.current_marker_pub.publish(marker_msg)
-
-                            return
+                    detected_markers.append((marker_id, distance))
 
                 except TransformException:
                     continue
+
+            if not detected_markers:
+                return
+
+            # ✅ PRIORITY: marker 1 first
+            detected_markers.sort(key=lambda x: x[0])
+
+            # ✅ LOCK: only track chosen marker
+            if self.target_marker is not None:
+                detected_markers = [m for m in detected_markers if m[0] == self.target_marker]
+
+                if not detected_markers:
+                    return
+
+            marker_id, distance = detected_markers[0]
+
+            threshold = 0.8
+
+            # ================= FAR → EXPLORE_<id> =================
+            if distance >= threshold:
+
+                if self.target_marker is None:
+                    self.target_marker = marker_id
+                    self.get_logger().info(f"Target locked → Marker {marker_id}, distance {distance:.2f}m")
+
+                if marker_id == self.target_marker:
+                    self.change_state("EXPLORE", marker_id)
+                    self.get_logger().info(f"Target locked → Marker {marker_id}, distance {distance:.2f}m")
+
+            # ================= NEAR → DOCK =================
+            else:
+                if marker_id == self.target_marker or self.target_marker is None:
+
+                    self.get_logger().info(f"Marker {marker_id} within threshold → docking")
+
+                    self.marker_detected = True
+                    self.marker_id = marker_id
+                    self.target_marker = marker_id
+
+                    self.change_state("DOCK", marker_id)
 
         except Exception as e:
             self.get_logger().debug(str(e))
@@ -212,6 +236,8 @@ class FSMNode(Node):
             self.get_logger().info(f"Marker {self.marker_id} completed")
 
             self.marker_id = None
+            self.target_marker = None
+
             self.change_state("EXPLORE")
 
         elif status == "MAP_DONE":
