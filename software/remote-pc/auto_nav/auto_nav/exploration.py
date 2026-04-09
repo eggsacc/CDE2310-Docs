@@ -230,9 +230,9 @@ class ExplorerNode(Node):
         # +90° to go from red (X) axis to blue (Z) axis direction
         facing_x = np.cos(marker_yaw + np.pi / 2)
         facing_y = np.sin(marker_yaw + np.pi / 2)
-        
+
         # Goal = 10cm out along the marker's facing direction
-        offset = 0.20
+        offset = 0.50
         goal_x = marker_x + facing_x * offset
         goal_y = marker_y + facing_y * offset
 
