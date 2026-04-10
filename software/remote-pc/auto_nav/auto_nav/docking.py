@@ -141,6 +141,7 @@ class DockingNode(Node):
         self.goal_odom_y = None
         self.goal_odom_yaw = None
         self.goal_computed = False
+        self.compute_odom_goal_failures = 0
         self.phase1_start_time = None
 
         # Phase 2: EMA filters and flip detection state
@@ -453,8 +454,16 @@ class DockingNode(Node):
         if not self.goal_computed:
             try:
                 self._compute_odom_goal()
+                self.compute_odom_goal_failures = 0
             except (LookupException, ExtrapolationException,
                     ConnectivityException):
+                self.compute_odom_goal_failures += 1
+                if self.compute_odom_goal_failures >= 5:
+                    self.get_logger().error(
+                        f"compute_odom_goal failed {self.compute_odom_goal_failures} times, ending docking")
+                    self.cmd_pub.publish(Twist())
+                    self._finish_docking("DOCK_FAIL")
+                    return
                 self.get_logger().info(
                     "Waiting for marker TF...",
                     throttle_duration_sec=1.0)
@@ -738,6 +747,7 @@ class DockingNode(Node):
         if self.normal_filter:
             self.normal_filter.reset()
         self.prev_normal = None
+        self.compute_odom_goal_failures = 0
 
         status_msg = String()
         status_msg.data = status
