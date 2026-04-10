@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-04-10
+
+### Added
+
+- New launcher CAD render & animations
+- BOM
+- Updated launcher electronics controller schematic
+- Added dynamic launching node to shoot when aruco detected
+  
 ## [1.0.0] - 2026-04-07
 
 **First full major release.** The system is now capable of executing the complete mission end-to-end: autonomous exploration and mapping, docking to ArUco markers, and payload delivery. All core subsystems are operational and integrated. Known issues and edge cases remain but do not prevent mission execution.
