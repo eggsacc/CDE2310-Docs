@@ -10,7 +10,7 @@ This document provides an overview of the hardware architecture for Turtlebot. T
 
 ## 3) Mechanical design
 ### 3.1) Flywheel launcher
-![flylwheel launcher](assets/launcher.png)
+![flylwheel launcher](assets/launcherv2.png)
 
 Our robot uses a single, bottom-mount flywheel as the ping-pong ball launch mechanism. The design strikes a balance between manufacturability, modularity and aesthetics.
 
@@ -61,7 +61,7 @@ Construction of the ramp using 5mm aluminium rods as ball guides also contribute
 ### 4.2) Adjustability
 Building on the modular design aspect, the launcher assembly features some adjustable components. The ball exit hood, for example, can be adjusted vertically by loosening 2 screws to accomodate different rubber band thicknesses or the amount of flywheel contact.
 
-![adjustable-hood](assets/adjustabl-hood.png)
+![adjustable-hood](assets/adjustable-hood.gif)
 
 The flywheel also allows lateral position adjustments since it is attached using a dovetail joint. These features allows us to adjust the launcher hardware on-the-fly, instead of redesigning in CAD and iterating multiple times.
 
