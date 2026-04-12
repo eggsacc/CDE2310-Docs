@@ -68,7 +68,10 @@ class FSMNode(Node):
             msg.data = new_state
 
         self.state_pub.publish(msg)
-        self.get_logger().info(f"Transitioned to {msg.data}")
+
+        if self.state != self.prev_state:
+            
+            self.get_logger().info(f"Transitioned to {msg.data}")
 
     # ================= FSM LOOP =================
     def state_machine_loop(self):
@@ -89,9 +92,10 @@ class FSMNode(Node):
         elif self.state == "END":
             self.get_logger().info("Mission Complete!")
 
-        msg = String()
-        msg.data = self.state
-        self.state_pub.publish(msg)
+        if self.state in ["EXPLORE", "EXPLORE_1", "EXPLORE_2"]:
+            msg = String()
+            msg.data = self.state
+            self.state_pub.publish(msg)
 
     # ================= LAUNCH STATE HELPER =================
     def getLaunchState(self):
@@ -206,7 +210,7 @@ class FSMNode(Node):
             else:
                 if marker_id == self.target_marker or self.target_marker is None:
 
-                    self.get_logger().info(f"Marker {marker_id} within threshold → docking")
+                    # self.get_logger().info(f"Marker {marker_id} within threshold → docking")
 
                     self.marker_detected = True
                     self.marker_id = marker_id
@@ -224,7 +228,7 @@ class FSMNode(Node):
         self.get_logger().info(f"Status: {status}")
 
         # ✅ DOCK SUCCESS
-        if status == "DOCK_DONE" and self.state == "DOCK":
+        if status == "DOCK_DONE":
             self.dock_attempts = 0
             self.change_state(self.getLaunchState())
 
