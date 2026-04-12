@@ -4,7 +4,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 
-from sensor_msgs.msg import Image         # raw camera image
+from sensor_msgs.msg import CompressedImage  # compressed camera image
 from geometry_msgs.msg import PoseStamped, TransformStamped
 
 import cv2
@@ -59,10 +59,10 @@ class ArucoDetector(Node):
             depth=10
         )
 
-        # Subscriber to raw camera images
+        # Subscriber to compressed camera images
         self.subscription = self.create_subscription(
-            Image,
-            '/camera/image_raw',
+            CompressedImage,
+            '/camera/image_raw/compressed',
             self.image_callback,
             qos_profile
         )
@@ -112,14 +112,18 @@ class ArucoDetector(Node):
     """
     def image_callback(self, msg):
         try:
-            # Extract y-plane luma values & cache frame, stamp
-            self.frame_buffer = np.frombuffer(msg.data, dtype=np.uint8)[:msg.height * msg.width].reshape(msg.height, msg.width)
-            self.msg_stamp = msg.header.stamp
+            np_arr = np.frombuffer(msg.data, dtype=np.uint8)
+            frame = cv2.imdecode(np_arr, cv2.IMREAD_GRAYSCALE)
+            if frame is not None:
+                self.frame_buffer = frame
+                self.msg_stamp = msg.header.stamp
+            else:
+                self.frame_buffer = None
+                self.msg_stamp = None
         except Exception as e:
-            self.get_logger().warn(f"Grayscale extraction failed: {e}")
+            self.get_logger().warn(f"Decompression failed: {e}")
             self.frame_buffer = None
             self.msg_stamp = None
-            return
 
     """
     Attempt to find aruco markers
