@@ -11,7 +11,7 @@ Unlike a fixed-state FSM (e.g., DOCK_A, DOCK_B), this implementation dynamically
 ---
 
 ## FSM Diagram
-![fsm-diagram](images/fsm-diagram.png)
+![fsm-diagram](assets/fsm-diagram.png)
 
 ---
 

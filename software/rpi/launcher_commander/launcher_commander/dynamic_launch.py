@@ -13,16 +13,15 @@ Subscribed Topics
 -----------------
 /states : std_msgs/String
     Main FSM command topic. This node activates when it receives "DYNAMIC_LAUNCH".
-/current_marker : std_msgs/String
+/current_marker : std_msgs/Int32
     ID of the currently detected ArUco marker (published by the detection node).
 
 Published Topics
 ----------------
 /operation_status : std_msgs/String
     Feedback to the main FSM. Possible values:
-    - "LAUNCH_COMPLETE"   : All shots fired successfully.
-    - "LAUNCH_TIMEOUT"    : Timed out with zero shots fired.
-    - "LAUNCH_INCOMPLETE" : Timed out after firing fewer than max_shots.
+    - "LAUNCH_DONE"    : All shots fired successfully.
+    - "LAUNCH_TIMEOUT" : Timed out, whether zero or some shots were fired.
 
 TF Dependencies
 ---------------
@@ -78,7 +77,7 @@ Example Launch
 
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import String
+from std_msgs.msg import String, Int32
 from tf2_ros import Buffer, TransformListener
 import serial
 import re
@@ -122,7 +121,7 @@ class DynamicLauncherNode(Node):
         # Publishers and subscribers
         self.status_pub = self.create_publisher(String, '/operation_status', 10)
         self.state_sub = self.create_subscription(String, '/states', self.state_callback, 10)
-        self.marker_sub = self.create_subscription(String, '/current_marker', self.marker_callback, 10)
+        self.marker_sub = self.create_subscription(Int32, '/current_marker', self.marker_callback, 10)
 
         # State tracking
         self.active = False
@@ -170,12 +169,9 @@ class DynamicLauncherNode(Node):
 
     # ── Marker detection ──────────────────────────────────────────────
 
-    def marker_callback(self, msg: String):
+    def marker_callback(self, msg: Int32):
         """Track the currently detected marker ID from /current_marker."""
-        try:
-            self.current_marker_id = int(msg.data.strip())
-        except ValueError:
-            self.current_marker_id = None
+        self.current_marker_id = msg.data
 
     def check_for_marker(self):
         """Poll TF tree for the target aruco marker."""
@@ -237,7 +233,7 @@ class DynamicLauncherNode(Node):
         if self.shots_fired >= self.max_shots:
             self.get_logger().info('All shots fired. Stopping launcher.')
             self.send_serial_command('STOP')
-            self.complete('LAUNCH_COMPLETE')
+            self.complete('LAUNCH_DONE')
 
     # ── Timeout ───────────────────────────────────────────────────────
 
@@ -259,7 +255,7 @@ class DynamicLauncherNode(Node):
                 f'Timeout after {self.shots_fired}/{self.max_shots} shots.'
             )
             self.send_serial_command('STOP')
-            self.complete('LAUNCH_INCOMPLETE')
+            self.complete('LAUNCH_TIMEOUT')
 
     # ── Completion and cleanup ────────────────────────────────────────
 

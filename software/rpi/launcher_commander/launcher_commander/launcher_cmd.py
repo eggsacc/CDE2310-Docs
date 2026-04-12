@@ -8,7 +8,7 @@ class LauncherNode(Node):
     def __init__(self):
         super().__init__('launcher_node')
 
-        self.declare_parameter('serial_port', '/dev/ttyUSB0')
+        self.declare_parameter('serial_port', '/dev/arduino-nano')
         self.declare_parameter('baud_rate', 115200)
 
         port = self.get_parameter('serial_port').value
@@ -34,8 +34,6 @@ class LauncherNode(Node):
 
         if command.startswith('STATIC_LAUNCH'):
             serial_cmd = b'SLAUNCH\n'
-        elif command.startswith('DYNAMIC_LAUNCH'):
-            serial_cmd = b'DLAUNCH\n'
         else:
             return
 
@@ -53,7 +51,7 @@ class LauncherNode(Node):
             if line == 'DONE':
                 self.get_logger().info('Arduino reported DONE.')
                 status = String()
-                status.data = 'LAUNCH_COMPLETE'
+                status.data = 'LAUNCH_DONE'
                 self.status_pub.publish(status)
                 self.waiting = False
 
