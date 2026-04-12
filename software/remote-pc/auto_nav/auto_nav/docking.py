@@ -157,12 +157,12 @@ class DockingNode(Node):
         self.recovery_spin_attempted = False
 
         # --- ROS2 parameters ---
-        self.declare_parameter("nav_standoff", 0.35)        # Phase 1 goal distance from marker along normal (m)
-        self.declare_parameter("fine_approach_dist", 0.30)   # Phase 2 stopping distance from marker (m)
+        self.declare_parameter("nav_standoff", 0.45)        # Phase 1 goal distance from marker along normal (m)
+        self.declare_parameter("fine_approach_dist", 0.40)   # Phase 2 stopping distance from marker (m)
         self.declare_parameter("standoff_distance", 0.20)    # Phase 3 final distance from marker surface (m)
-        self.declare_parameter("odom_position_tol", 0.02)    # Phase 1 odom arrival position tolerance (m)
-        self.declare_parameter("lateral_tol", 0.03)            # Phase 2 lateral alignment tolerance (m)
-        self.declare_parameter("distance_tol", 0.03)         # Phase 2 distance arrival tolerance (m)
+        self.declare_parameter("odom_position_tol", 0.05)    # Phase 1 odom arrival position tolerance (m)
+        self.declare_parameter("lateral_tol", 0.05)            # Phase 2 lateral alignment tolerance (m)
+        self.declare_parameter("distance_tol", 0.05)         # Phase 2 distance arrival tolerance (m)
         self.declare_parameter("final_tol", 0.03)            # Phase 3 LIDAR distance tolerance (m)
         self.declare_parameter("heading_tol", 0.05)          # Angular tolerance for heading alignment (rad)
         self.declare_parameter("angular_threshold", 0.05)    # Min angle error to trigger pure rotation (rad)
