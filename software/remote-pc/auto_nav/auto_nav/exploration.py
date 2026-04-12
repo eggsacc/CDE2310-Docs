@@ -77,6 +77,8 @@ class ExplorerNode(Node):
         
 
         
+
+        
         # Timer for periodic exploration
         self.timer = self.create_timer(0.5, self.explore)
 

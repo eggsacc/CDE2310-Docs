@@ -135,6 +135,8 @@ class DockingNode(Node):
         self.iteration_count = 0
         self.consecutive_misses = 0
         self.aligned_iterations = 0
+        self.odom_tf_fail_count = 0
+        self.compute_goal_tf_fail_count = 0
 
         # Phase 1: odom-frame goal
         self.goal_odom_x = None
@@ -278,6 +280,8 @@ class DockingNode(Node):
         self.recovery_spin_prev_yaw = None
         self.recovery_spin_cumulative = 0.0
         self.recovery_spin_attempted = False
+        self.odom_tf_fail_count = 0
+        self.compute_goal_tf_fail_count = 0
 
         self.docking_timer = self.create_timer(0.1, self.docking_step)
 
@@ -306,7 +310,8 @@ class DockingNode(Node):
     # ================================================================
 
     def _get_robot_odom_pose(self):
-        """Returns (x, y, yaw) in odom frame, or None on failure."""
+        """Returns (x, y, yaw) in odom frame, or None on failure.
+        Aborts docking with DOCK_FAIL if TF lookup fails 5 times in a row."""
         try:
             tf = self.tf_buffer.lookup_transform(
                 'odom', 'base_link', rclpy.time.Time())
@@ -314,9 +319,16 @@ class DockingNode(Node):
             q = tf.transform.rotation
             yaw = Rotation.from_quat(
                 [q.x, q.y, q.z, q.w]).as_euler('xyz')[2]
+            self.odom_tf_fail_count = 0
             return t.x, t.y, yaw
         except (LookupException, ExtrapolationException,
                 ConnectivityException):
+            self.odom_tf_fail_count += 1
+            if self.odom_tf_fail_count >= 5 and self.docking_phase is not None:
+                self.get_logger().error(
+                    "odom→base_link TF failed 5 times in a row — aborting docking")
+                self.cmd_pub.publish(Twist())
+                self._finish_docking("DOCK_FAIL")
             return None
 
     def _extract_normal(self, rotation_matrix):
@@ -453,8 +465,16 @@ class DockingNode(Node):
         if not self.goal_computed:
             try:
                 self._compute_odom_goal()
+                self.compute_goal_tf_fail_count = 0
             except (LookupException, ExtrapolationException,
                     ConnectivityException):
+                self.compute_goal_tf_fail_count += 1
+                if self.compute_goal_tf_fail_count >= 5:
+                    self.get_logger().error(
+                        "Marker TF lookup failed 5 times — aborting docking")
+                    self.cmd_pub.publish(Twist())
+                    self._finish_docking("DOCK_FAIL")
+                    return
                 self.get_logger().info(
                     "Waiting for marker TF...",
                     throttle_duration_sec=1.0)
@@ -733,6 +753,8 @@ class DockingNode(Node):
         self.recovery_spin_prev_yaw = None
         self.recovery_spin_cumulative = 0.0
         self.recovery_spin_attempted = False
+        self.odom_tf_fail_count = 0
+        self.compute_goal_tf_fail_count = 0
         if self.pos_filter:
             self.pos_filter.reset()
         if self.normal_filter:
