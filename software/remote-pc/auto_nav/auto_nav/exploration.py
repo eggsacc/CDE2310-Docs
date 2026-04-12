@@ -72,6 +72,9 @@ class ExplorerNode(Node):
         # Map and position data
         self.map_data = None
         self.robot_position = (0, 0)  # Placeholder, update from localization
+        self.aruco_marker_locations = {}  # Store detected aruco marker locations
+
+        
 
         
 
@@ -85,6 +88,7 @@ class ExplorerNode(Node):
         self.tvec = None
         self.status_flag = False
         self.prev_goal = None
+        self.target_marker = None  # Track which marker (1 or 2) to navigate toward
 
     # for odometry
     # def odom_callback(self, msg):
@@ -110,9 +114,23 @@ class ExplorerNode(Node):
         # self.get_logger().info(f"Received status: {msg.data}")
         if msg.data == "EXPLORE": 
             self.status_flag = True
+            self.target_marker = None  # Normal frontier exploration
             # self.get_logger().info("Status set to EXPLORE")
+        elif msg.data == "EXPLORE_0": 
+            self.status_flag = True
+            self.target_marker = 0  # Normal frontier exploration
+            # self.get_logger().info("Status set to EXPLORE")
+        elif msg.data == "EXPLORE_1":
+            self.status_flag = True
+            self.target_marker = 1  # Navigate to marker 1
+            # self.get_logger().info("Status set to EXPLORE_1 - targeting marker 1")
+        elif msg.data == "EXPLORE_2":
+            self.status_flag = True
+            self.target_marker = 2  # Navigate to marker 2
+            # self.get_logger().info("Status set to EXPLORE_2 - targeting marker 2")
         else:
             self.status_flag = False
+            self.target_marker = None
             self.cancel_navigation()
             # self.get_logger().info("Status set to non-EXPLORE")
     
@@ -142,60 +160,55 @@ class ExplorerNode(Node):
     def store_aruco_marker_location(self, marker_id=None):
         """
         Check if an aruco marker TF transform exists and store its map location.
-        If marker_id is None, checks all available aruco markers.
-        Returns list of stored marker locations: [(marker_id, x, y, z), ...]
+        Stores full pose: (x, y, z, qx, qy, qz, qw)
         """
         import re
-        
-        if not hasattr(self, 'aruco_marker_locations'):
-            self.aruco_marker_locations = []
         
         try:
             frames = self.tf_buffer.all_frames_as_string()
             
             if marker_id is not None:
-                # Check specific marker
                 marker_frame = f"aruco_marker_{marker_id}"
                 if marker_frame in frames:
                     try:
                         trans = self.tf_buffer.lookup_transform('map', marker_frame, rclpy.time.Time())
-                        x = trans.transform.translation.x
-                        y = trans.transform.translation.y
-                        z = trans.transform.translation.z
-                        
-                        # Check if this marker location is already stored
-                        if not any(loc[0] == marker_id for loc in self.aruco_marker_locations):
-                            self.aruco_marker_locations.append((marker_id, x, y, z))
-                            self.get_logger().info(f"Stored Aruco Marker {marker_id} at map location: ({x:.2f}, {y:.2f}, {z:.2f})")
-                        
-                        return self.aruco_marker_locations
+                        x  = trans.transform.translation.x
+                        y  = trans.transform.translation.y
+                        z  = trans.transform.translation.z
+                        qx = trans.transform.rotation.x
+                        qy = trans.transform.rotation.y
+                        qz = trans.transform.rotation.z
+                        qw = trans.transform.rotation.w
+
+                        # Store full pose so we can reconstruct facing direction later
+                        self.aruco_marker_locations[marker_id] = (x, y, z, qx, qy, qz, qw)
+
                     except TransformException as e:
                         self.get_logger().debug(f"Could not get transform for marker {marker_id}: {e}")
-                        return self.aruco_marker_locations
+
             else:
-                # Check all available aruco markers
                 marker_frames = re.findall(r'aruco_marker_(\d+)', frames)
                 
                 for marker_id_str in marker_frames:
-                    marker_id = int(marker_id_str)
-                    marker_frame = f"aruco_marker_{marker_id}"
-                    
+                    mid = int(marker_id_str)
+                    marker_frame = f"aruco_marker_{mid}"
                     try:
                         trans = self.tf_buffer.lookup_transform('map', marker_frame, rclpy.time.Time())
-                        x = trans.transform.translation.x
-                        y = trans.transform.translation.y
-                        z = trans.transform.translation.z
-                        
-                        # Check if this marker location is already stored
-                        if not any(loc[0] == marker_id for loc in self.aruco_marker_locations):
-                            self.aruco_marker_locations.append((marker_id, x, y, z))
-                            self.get_logger().info(f"Stored Aruco Marker {marker_id} at map location: ({x:.2f}, {y:.2f}, {z:.2f})")
-                    
+                        x  = trans.transform.translation.x
+                        y  = trans.transform.translation.y
+                        z  = trans.transform.translation.z
+                        qx = trans.transform.rotation.x
+                        qy = trans.transform.rotation.y
+                        qz = trans.transform.rotation.z
+                        qw = trans.transform.rotation.w
+
+                        self.aruco_marker_locations[mid] = (x, y, z, qx, qy, qz, qw)
+
                     except TransformException:
                         continue
-                
-                return self.aruco_marker_locations
-        
+
+            return self.aruco_marker_locations
+
         except Exception as e:
             self.get_logger().error(f"Error storing aruco marker locations: {e}")
             return self.aruco_marker_locations
@@ -203,18 +216,66 @@ class ExplorerNode(Node):
     def map_callback(self, msg):
         self.map_data = msg
         # self.get_logger().info("Map received")
+    
+    def navigate_to_marker(self):
+        target_marker = self.target_marker
 
-    def navigate_to(self, x, y):
+        if target_marker is None or target_marker not in self.aruco_marker_locations:
+            return False
+
+        pose = self.aruco_marker_locations[target_marker]
+        marker_x, marker_y, marker_z, qx, qy, qz, qw = pose
+
+        # Use your existing euler_from_quaternion to get the marker's yaw
+        _, _, marker_yaw = euler_from_quaternion(qx, qy, qz, qw)
+
+        # +90° to go from red (X) axis to blue (Z) axis direction
+        facing_x = np.cos(marker_yaw + np.pi / 2)
+        facing_y = np.sin(marker_yaw + np.pi / 2)
+
+        # Goal = 10cm out along the marker's facing direction
+        offset = 0.50
+        goal_x = marker_x + facing_x * offset
+        goal_y = marker_y + facing_y * offset
+
+        # Robot faces back toward the marker
+        yaw = np.arctan2(-facing_y, -facing_x)
+
+        self.get_logger().info(
+            f"Navigating to Marker {target_marker} | "
+            f"marker=({marker_x:.2f}, {marker_y:.2f}) | "
+            f"goal=({goal_x:.2f}, {goal_y:.2f}) | "
+            f"facing yaw={np.degrees(yaw):.1f}°"
+        )
+
+        self.navigate_to(goal_x, goal_y, yaw)
+        return True
+
+    def navigate_to(self, x, y, yaw=None):
         """
         Send navigation goal to Nav2.
+        x, y: goal position in map frame
+        yaw: desired rotation angle in radians (optional). If None, defaults to 0 (facing forward).
         """
-
+        from math import cos, sin
+        
         goal_msg = PoseStamped()
         goal_msg.header.frame_id = 'map'
         goal_msg.header.stamp = self.get_clock().now().to_msg()
         goal_msg.pose.position.x = x
         goal_msg.pose.position.y = y
-        goal_msg.pose.orientation.w = 1.0  # Facing forward
+        
+        # If yaw is provided, convert it to a quaternion
+        if yaw is not None:
+            # Convert yaw angle to quaternion (rotation around z-axis)
+            # Quaternion: (x, y, z, w) where z = sin(yaw/2), w = cos(yaw/2)
+            goal_msg.pose.orientation.x = 0.0
+            goal_msg.pose.orientation.y = 0.0
+            goal_msg.pose.orientation.z = sin(yaw / 2.0)
+            goal_msg.pose.orientation.w = cos(yaw / 2.0)
+        else:
+            # Default: no rotation (facing forward)
+            goal_msg.pose.orientation.w = 1.0
 
         nav_goal = NavigateToPose.Goal()
         nav_goal.pose = goal_msg
@@ -390,57 +451,76 @@ class ExplorerNode(Node):
         return chosen_frontier
 
     def explore(self):
+        # Handle marker-specific exploration
+        if self.target_marker is not None:
+            # Navigate to specific marker (1 or 2)
+            if self.target_marker in self.aruco_marker_locations:
+                self.get_logger().info(f"Marker {self.target_marker} found! Navigating to it...")
+                self.navigate_to_marker()
+            else:
+                self.get_logger().info(f"Marker {self.target_marker} not found yet, continuing exploration...")
+                # Continue with normal frontier exploration while searching for target marker
+                if self.map_data is not None:
+                    self._explore_frontiers()
+            return
+        
+        # Normal frontier exploration
         if self.status_flag:
             if self.map_data is None:
                 self.get_logger().warning("No map data available")
                 return
-
-            # Convert map to numpy array
-            map_array = np.array(self.map_data.data).reshape(
-                (self.map_data.info.height, self.map_data.info.width))
-
-            # Detect frontiers
-            frontiers = self.find_frontiers(map_array)
-
-            # if time.time() - self.explorationtime < 120:
-            #     # self.get_logger().info("Exploration in progress...")
-            # else:
-            #     if len(frontiers) == 0:
-            #         self.get_logger().info("No frontiers found. Exploration complete!")
-            #         self.timer.cancel()
-            #         self.stopbot()
-            #         rclpy.shutdown()
-
-            #     # self.shutdown_robot()
-            #         return
-
-            # Choose the closest frontier
-            chosen_frontier = self.choose_frontier(frontiers, map_array)
-
-            if not chosen_frontier:
-                self.get_logger().warning("No frontiers to explore")
-                return
-
-            # Convert the chosen frontier to world coordinates
-            goal_x = chosen_frontier[1] * self.map_data.info.resolution + self.map_data.info.origin.position.x
-            goal_y = chosen_frontier[0] * self.map_data.info.resolution + self.map_data.info.origin.position.y
-
-            if self.prev_goal is None:
-                self.prev_goal = (goal_x, goal_y)
-
-            # Navigate to the chosen frontier once goal is reached or after 10 seconds
-            if self.flag or time.time() - self.time > 10:
-                if self.prev_goal == (goal_x, goal_y):
-                    self.get_logger().info("Already at the chosen frontier, looking for another one...")
-                    self.visited_frontiers.add(chosen_frontier)  # Mark this frontier as visited
-                    return
-                else:
-                    self.prev_goal = (goal_x, goal_y)
-                self.navigate_to(goal_x, goal_y)
-                self.flag = False
-                self.time = time.time()
             
+            self._explore_frontiers()
             return
+    
+    def _explore_frontiers(self):
+        """Helper method for frontier-based exploration"""
+        # Convert map to numpy array
+        map_array = np.array(self.map_data.data).reshape(
+            (self.map_data.info.height, self.map_data.info.width))
+
+        # Detect frontiers
+        frontiers = self.find_frontiers(map_array)
+
+        # if time.time() - self.explorationtime < 120:
+        #     # self.get_logger().info("Exploration in progress...")
+        # else:
+        #     if len(frontiers) == 0:
+        #         self.get_logger().info("No frontiers found. Exploration complete!")
+        #         self.timer.cancel()
+        #         self.stopbot()
+        #         rclpy.shutdown()
+
+        #     # self.shutdown_robot()
+        #         return
+
+        # Choose the closest frontier
+        chosen_frontier = self.choose_frontier(frontiers, map_array)
+
+        if not chosen_frontier:
+            self.get_logger().warning("No frontiers to explore")
+            return
+
+        # Convert the chosen frontier to world coordinates
+        goal_x = chosen_frontier[1] * self.map_data.info.resolution + self.map_data.info.origin.position.x
+        goal_y = chosen_frontier[0] * self.map_data.info.resolution + self.map_data.info.origin.position.y
+
+        if self.prev_goal is None:
+            self.prev_goal = (goal_x, goal_y)
+
+        # Navigate to the chosen frontier once goal is reached or after 10 seconds
+        if self.flag or time.time() - self.time > 10:
+            if self.prev_goal == (goal_x, goal_y):
+                self.get_logger().info("Already at the chosen frontier, looking for another one...")
+                self.visited_frontiers.add(chosen_frontier)  # Mark this frontier as visited
+                return
+            else:
+                self.prev_goal = (goal_x, goal_y)
+            self.navigate_to(goal_x, goal_y)
+            self.flag = False
+            self.time = time.time()
+        
+        return
 
     # def shudown_robot(self):
     #     
