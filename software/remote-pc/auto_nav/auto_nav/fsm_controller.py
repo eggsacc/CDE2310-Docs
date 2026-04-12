@@ -148,7 +148,7 @@ class FSMNode(Node):
     # ================= MARKER DETECTION =================
     def check_for_markers(self):
 
-
+        
         try:
             frames = self.tf_buffer.all_frames_as_string()
             marker_ids = re.findall(r'aruco_marker_(\d+)', frames)
@@ -160,7 +160,7 @@ class FSMNode(Node):
                 marker_id = int(marker_id_str)
 
                 if marker_id in self.completed_markers:
-                    continue
+                    return
 
                 try:
                     transform = self.tf_buffer.lookup_transform(
@@ -195,28 +195,31 @@ class FSMNode(Node):
 
             threshold = 0.8
 
-            # ================= FAR → EXPLORE_<id> =================
-            if distance >= threshold:
+            # ONLY CHANGE STATE IF EXPLORING - prevents mid-dock state changes when other markers appear
+            if self.state == "EXPLORE" and marker_id not in self.completed_markers:
 
-                if self.target_marker is None:
-                    self.target_marker = marker_id
-                    self.get_logger().info(f"Target locked → Marker {marker_id}, distance {distance:.2f}m")
+                # ================= FAR → EXPLORE_<id> =================
+                if distance >= threshold:
 
-                if marker_id == self.target_marker:
-                    self.change_state("EXPLORE", marker_id)
-                    self.get_logger().info(f"Target locked → Marker {marker_id}, distance {distance:.2f}m")
+                    if self.target_marker is None:
+                        self.target_marker = marker_id
+                        self.get_logger().info(f"Target locked → Marker {marker_id}, distance {distance:.2f}m")
 
-            # ================= NEAR → DOCK =================
-            else:
-                if marker_id == self.target_marker or self.target_marker is None:
+                    if marker_id == self.target_marker:
+                        self.change_state("EXPLORE", marker_id)
+                        self.get_logger().info(f"Target locked → Marker {marker_id}, distance {distance:.2f}m")
 
-                    # self.get_logger().info(f"Marker {marker_id} within threshold → docking")
+                # ================= NEAR → DOCK =================
+                else:
+                    if marker_id == self.target_marker or self.target_marker is None:
 
-                    self.marker_detected = True
-                    self.marker_id = marker_id
-                    self.target_marker = marker_id
+                        # self.get_logger().info(f"Marker {marker_id} within threshold → docking")
 
-                    self.change_state("DOCK", marker_id)
+                        self.marker_detected = True
+                        self.marker_id = marker_id
+                        self.target_marker = marker_id
+
+                        self.change_state("DOCK", marker_id)
 
         except Exception as e:
             self.get_logger().debug(str(e))
