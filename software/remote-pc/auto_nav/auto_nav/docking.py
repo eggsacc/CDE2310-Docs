@@ -353,19 +353,12 @@ class DockingNode(Node):
         self.prev_normal = normal.copy()
         return normal
 
-    def _lookup_marker_bl(self, max_age=0.5):
+    def _lookup_marker_bl(self):
         """Single TF lookup returning (position, normal) in base_link.
-        Rejects transforms older than max_age seconds.
         Raises LookupException/ExtrapolationException on failure."""
         tf = self.tf_buffer.lookup_transform(
             'base_link', f'aruco_marker_{self.marker_id}',
             rclpy.time.Time())
-
-        age = (self.get_clock().now() - rclpy.time.Time.from_msg(
-            tf.header.stamp)).nanoseconds / 1e9
-        if age > max_age:
-            raise LookupException(
-                f"Marker TF is {age:.2f}s old (max {max_age}s)")
 
         t = tf.transform.translation
         q = tf.transform.rotation
@@ -410,17 +403,11 @@ class DockingNode(Node):
 
     def _get_marker_data(self):
         """TF lookup with EMA filtering on position and normal.
-        Returns (smoothed_pos, smoothed_normal) or (None, None).
-        Rejects transforms older than 0.5s."""
+        Returns (smoothed_pos, smoothed_normal) or (None, None)."""
         try:
             tf = self.tf_buffer.lookup_transform(
                 'base_link', f'aruco_marker_{self.marker_id}',
                 rclpy.time.Time())
-
-            age = (self.get_clock().now() - rclpy.time.Time.from_msg(
-                tf.header.stamp)).nanoseconds / 1e9
-            if age > 0.5:
-                return None, None
 
             t = tf.transform.translation
             q = tf.transform.rotation
