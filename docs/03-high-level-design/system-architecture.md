@@ -14,7 +14,7 @@ These subsystems communicate through ROS 2 topics and TF transforms.
 ---
 
 ## System Architecture Diagram
-![system-architecture-diagram](images/system-architecture.png)
+![system-architecture-diagram](assets/system-architecture.png)
 ---
 
 ## Subsystem Description
