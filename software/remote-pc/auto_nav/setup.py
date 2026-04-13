@@ -29,6 +29,8 @@ setup(
             'exploration = auto_nav.exploration:main',
             'fsm_controller = auto_nav.fsm_controller:main',
             'docking = auto_nav.docking:main',
+            'aruco_detector2 = auto_nav.aruco_detector2:main',
+            'dynamic_launch = auto_nav.dynamic_launch:main',
             'mainlaunch = auto_nav.mainlaunch:main'
         ],
     },
