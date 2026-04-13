@@ -236,8 +236,6 @@ void handleSerial() {
     slaunchNextAction = millis() + SLAUNCH_SPINUP_MS;  // wait for spinup first
     runState          = STATE_SLAUNCH;
 
-  } else if (cmd == F("DLAUNCH")) {
-    // TODO: implement DLAUNCH
   }
 }
 
