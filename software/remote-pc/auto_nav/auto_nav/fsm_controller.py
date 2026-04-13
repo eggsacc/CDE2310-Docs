@@ -39,6 +39,7 @@ class FSMNode(Node):
         self.completed_markers = set()
 
         # Lift timeout
+        self.lift_init_start_time = None
         self.lift_start_time = None
         self.lift_timeout = 15  # seconds
 
@@ -75,6 +76,12 @@ class FSMNode(Node):
         self.state_pub.publish(msg)
         self.last_published_state = self.state
 
+        # Reset timers on state transition
+        if new_state == "LIFT_INIT":
+            self.lift_init_start_time = None
+        elif new_state == "LIFT":
+            self.lift_start_time = None
+
         if self.state != self.prev_state:
             self.get_logger().info(f"Transitioned to {msg.data}")
 
@@ -92,6 +99,18 @@ class FSMNode(Node):
                 self.marker_detected = False
                 self.change_state("DOCK", self.marker_id)
 
+        # ================= LIFT_INIT TIMEOUT =================
+        if self.state == "LIFT_INIT":
+            if self.lift_init_start_time is None:
+                self.lift_init_start_time = self.get_clock().now()
+
+            elapsed = (self.get_clock().now() - self.lift_init_start_time).nanoseconds / 1e9
+
+            if elapsed > self.lift_timeout:
+                self.get_logger().warn("LIFT_INIT timeout → skipping lift objective and returning to EXPLORE")
+                self.lift_init_start_time = None
+                self.change_state("EXPLORE")
+
         # ================= LIFT TIMEOUT =================
         if self.state == "LIFT":
             if self.lift_start_time is None:
@@ -100,8 +119,9 @@ class FSMNode(Node):
             elapsed = (self.get_clock().now() - self.lift_start_time).nanoseconds / 1e9
 
             if elapsed > self.lift_timeout:
-                self.error_detected = True
-                self.error_type = "LIFT_FAIL"
+                self.get_logger().warn("LIFT timeout → skipping lift and going to END")
+                self.lift_start_time = None
+                self.change_state("END")
 
         # ================= END =================
         if self.state == "END":
