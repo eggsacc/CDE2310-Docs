@@ -1,8 +1,8 @@
 # Interface Control Document (ICD)
 
-**Version:** 1.0.0  
-**Last updated:** 2026-04-12  
-**Author:** Wang yizhang  
+**Version:** 1.0.1 
+**Last updated:** 2026-04-13 
+**Author:** Wang Yizhang  
 **Status:** Draft  
 
 ---
@@ -78,15 +78,14 @@ Electrical interfaces and power distribution.
 | ID | Boundary | Interface | Purpose |
 |---|---|---|---|
 | IF-01 | SW ↔ SW | `/states` | Mission command topic |
-| IF-02 | SW ↔ SW | `/current_marker` | Selected target marker ID |
-| IF-03 | SW ↔ SW | `/operation_status` | Execution feedback topic |
-| IF-04 | SW ↔ HW | USB serial (`/dev/arduino_launcher`) | Raspberry Pi to Arduino launcher control |
-| IF-05 | HW ↔ EL | Arduino PWM output to motor stage | Flywheel speed control |
-| IF-06 | HW ↔ EL | Arduino servo output | Ball feeding mechanism |
-| IF-07 | HW ↔ EL | Arduino analog input | Potentiometer tuning input |
-| IF-08 | HW ↔ EL | Arduino digital input | Mode button |
-| IF-09 | HW ↔ EL | Arduino I2C | OLED display |
-| IF-10 | HW ↔ EL | Power rails | System power distribution |
+| IF-02 | SW ↔ SW | `/operation_status` | Execution feedback topic |
+| IF-03 | SW ↔ HW | USB serial (`/dev/arduino_launcher`) | Raspberry Pi to Arduino launcher control |
+| IF-04 | HW ↔ EL | Arduino PWM output to motor stage | Flywheel speed control |
+| IF-05 | HW ↔ EL | Arduino servo output | Ball feeding mechanism |
+| IF-06 | HW ↔ EL | Arduino analog input | Potentiometer tuning input |
+| IF-07 | HW ↔ EL | Arduino digital input | Mode button |
+| IF-08 | HW ↔ EL | Arduino I2C | OLED display |
+| IF-09 | HW ↔ EL | Power rails | System power distribution |
 
 ---
 
@@ -110,18 +109,7 @@ This is the main command topic used by the FSM to activate the appropriate softw
 
 ---
 
-### 5.2 `/current_marker`
-
-- **Type:** `std_msgs/UInt32`
-- **Publisher:** `fsm_controller`
-- **Subscribers:** docking / launcher-side logic as needed
-
-**Description**  
-This topic carries the ID of the currently selected ArUco marker. It is used to separate target selection from the high-level mission state.
-
----
-
-### 5.3 `/operation_status`
+### 5.2 `/operation_status`
 
 - **Type:** `std_msgs/String`
 - **Publishers:** `docking`, `launcher_cmd`
