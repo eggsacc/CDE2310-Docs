@@ -17,6 +17,7 @@ class FSMNode(Node):
         # ================= INTERNAL VARIABLES =================
         self.state = "IDLE"
         self.prev_state = None
+        self.last_published_state = None  # Track last published state
         
         self.marker_detected = False
         self.marker_count = 0
@@ -47,7 +48,6 @@ class FSMNode(Node):
 
         # ================= PUBLISHERS =================
         self.state_pub = self.create_publisher(String, '/states', 10)
-        self.current_marker_pub = self.create_publisher(Int32, '/current_marker', 10)
 
         # ================= SUBSCRIBERS =================
         self.create_subscription(String, '/operation_status', self.status_callback, 10)
@@ -71,7 +71,9 @@ class FSMNode(Node):
         else:
             msg.data = new_state
 
+        # Publish once per state transition
         self.state_pub.publish(msg)
+        self.last_published_state = self.state
 
         if self.state != self.prev_state:
             self.get_logger().info(f"Transitioned to {msg.data}")
@@ -105,11 +107,16 @@ class FSMNode(Node):
         if self.state == "END":
             self.get_logger().info("Mission Complete!")
 
-        # Always publish explore states
+        # Continuously publish EXPLORE states, publish others only once per transition
         if self.state.startswith("EXPLORE"):
             msg = String()
             msg.data = self.state
             self.state_pub.publish(msg)
+        elif self.state != self.last_published_state:
+            msg = String()
+            msg.data = self.state
+            self.state_pub.publish(msg)
+            self.last_published_state = self.state
 
     # ================= LAUNCH / LIFT STATE =================
     def getLaunchState(self):
@@ -244,12 +251,14 @@ class FSMNode(Node):
         # ================= DOCK DONE =================
         if status == "DOCK_DONE":
             self.dock_attempts = 0
+            # Add marker to completed immediately to prevent re-detection
+            self.completed_markers.add(self.marker_id)
             self.change_state(self.getLaunchState())
 
         # ================= LAUNCH DONE =================
         elif status == "LAUNCH_DONE" and self.state in ["STATIC_LAUNCH", "DYNAMIC_LAUNCH"]:
             self.marker_count += 1
-            self.completed_markers.add(self.marker_id)
+            # Marker already added to completed_markers on DOCK_DONE
 
             self.get_logger().info(f"Marker {self.marker_id} completed")
 
