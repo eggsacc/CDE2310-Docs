@@ -32,6 +32,7 @@ setup(
             'aruco_detector2 = auto_nav.aruco_detector2:main',
             'dynamic_launch = auto_nav.dynamic_launch:main',
             'mainlaunch = auto_nav.mainlaunch:main'
+            'lift_node = auto_nav.lift_node:main'
         ],
     },
 )
