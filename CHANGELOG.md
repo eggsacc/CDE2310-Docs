@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-04-13
+
+- Added application note docs (AN003 & AN004 are scaffolds to be filled!)
+- Updated controller schematic missing resistor value & incorrect pinmap
+
+## [1.0.0] - 2026-04-12
+
+- Added ICD v1.0.0
+- Migrated aruco detector package to remote pc
+- Updated dynamic launch node to also command static sequence
+- Added lift API code
+
 ## [1.0.0] - 2026-04-10
 
 ### Added

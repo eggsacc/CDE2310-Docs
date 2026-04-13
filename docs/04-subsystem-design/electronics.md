@@ -32,7 +32,7 @@ The controller is connected to the Raspberry Pi SBC via USB, and is supplied +6V
 - `"FIRE"`: Feed a single ping pong ball
 - `"PING"`: Serial connection check. Returns "PONG" if available.
 
-![launcher electronic diagram](assets/launcher_controller_sch.png)
+![launcher electronic diagram](assets/controller_sch.png)
 
 
 
