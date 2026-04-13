@@ -22,6 +22,7 @@ NODES_TO_LAUNCH = [
     ("Cartographer", "ros2 launch turtlebot3_cartographer cartographer.launch.py", False),
     ("Navigation", "ros2 launch turtlebot3_navigation2 navigation2.launch.py", False),
     ("Exploration", "ros2 run auto_nav exploration", True),  # Show logs for exploration
+    ("Aruco Detector", "ros2 run auto_nav aruco_detector --ros-args -p verbose:=False -p update_frequency:=24 -p marker_size:=0.05", True),  # Show logs for Aruco detection
     # Add more nodes as needed, uncomment or add new ones
 ]
 
