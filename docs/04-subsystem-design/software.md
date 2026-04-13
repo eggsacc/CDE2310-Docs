@@ -35,7 +35,7 @@ The software is organised into three deployment tiers and four functional layers
 The perception layer is implemented on the Raspberry Pi by `aruco_detector.py`. It subscribes to `/camera/image_raw`, extracts grayscale image data, detects ArUco markers, estimates marker pose with `solvePnP`, and broadcasts each marker into TF as `aruco_marker_<id>` relative to the camera frame. This TF output is the main perception product consumed by the rest of the stack.
 
 **Mission management layer**  
-The mission-management layer is implemented on the remote PC by `fsm_controller.py`. This node is the top-level coordinator for the mission. It publishes mission commands on `/states`, publishes the currently selected marker on `/current_marker`, watches `/operation_status` for completion or failure feedback, and transitions between `EXPLORE`, `DOCK`, `STATIC_LAUNCH`, `DYNAMIC_LAUNCH`, and `END`.
+The mission-management layer is implemented on the remote PC by `fsm_controller.py`. This node is the top-level coordinator for the mission. It publishes mission commands on `/states`, watches `/operation_status` for completion or failure feedback, and transitions between `EXPLORE`, `DOCK`, `STATIC_LAUNCH`, `DYNAMIC_LAUNCH`, and `END`.
 
 **Navigation and docking layer**  
 The navigation layer is split across `exploration.py` and `docking.py`, both on the remote PC. During exploration, `exploration.py` subscribes to `/map`, detects frontiers in the occupancy grid, selects candidate frontiers, and sends navigation goals through the Nav2 `NavigateToPose` action server. When docking is requested, `docking.py` takes over direct motion control via `/cmd_vel`. It performs a three-phase docking pipeline: odometry-based navigation to a standoff pose, TF-based fine alignment to the marker, and LIDAR-based final approach to the required launch distance.
@@ -48,7 +48,6 @@ The actuation layer is split between the Raspberry Pi and the Arduino. On the Ra
 The main software interfaces are:
 - `/states` — mission command bus from `fsm_controller.py` to exploration, docking, and launch nodes
 - `/operation_status` — execution feedback bus from docking / launcher nodes back to `fsm_controller.py`
-- `/current_marker` — marker ID selected by the FSM for downstream launch logic
 - `/map` — occupancy grid used by the exploration subsystem
 - `/cmd_vel` — direct velocity output used primarily by the docking controller
 - TF tree (`aruco_marker_<id>`) — perception output shared across exploration, docking, FSM logic, and dynamic launch logic
@@ -84,7 +83,6 @@ The main software interfaces are:
 | Name | Type | Publisher | Subscriber | Description |
 |------|------|-----------|------------|-------------|
 | `/states` | `std_msgs/String` | `fsm_controller` | `explorer`, `docking_node`, `launcher_node`, `dynamic_launcher_node` | Main mission command topic. Used to trigger behaviours such as `EXPLORE`, `DOCK_<id>`, `STATIC_LAUNCH`, and `DYNAMIC_LAUNCH`. |
-| `/current_marker` | `std_msgs/Int32` | `fsm_controller` | `dynamic_launcher_node` | Current marker selected by the FSM for launch-related behaviour. |
 | `/operation_status` | `std_msgs/String` | `docking_node`, `launcher_node`, `dynamic_launcher_node` | `fsm_controller` | Execution feedback topic. Used for docking completion/failure and launcher completion/timeout reporting. |
 | `/map` | `nav_msgs/OccupancyGrid` | SLAM / mapping stack | `explorer` | Live occupancy grid used for frontier detection and exploration planning. |
 | `/scan` | `sensor_msgs/LaserScan` | TurtleBot3 LIDAR driver | `docking_node` | LIDAR scan used for final close-range docking distance control. |

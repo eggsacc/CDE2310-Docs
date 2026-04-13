@@ -123,13 +123,18 @@ class DynamicLauncherNode(Node):
         self.state_sub = self.create_subscription(String, '/states', self.state_callback, 10)
         self.marker_sub = self.create_subscription(Int32, '/current_marker', self.marker_callback, 10)
 
-        # State tracking
+        # State tracking for dynamic
         self.active = False
         self.flywheel_spinning = False
         self.shots_fired = 0
         self.current_marker_id = None
         self.waiting_to_fire = False
         self.last_fire_time = None  # tracks when the last shot was fired
+
+        # State tracking for static
+        self.static = False
+        self.static_shots_fired = 0
+
 
         # Timers (created on activation)
         self.timeout_timer = None
@@ -150,6 +155,50 @@ class DynamicLauncherNode(Node):
         if command == 'DYNAMIC_LAUNCH' and not self.active:
             self.get_logger().info('DYNAMIC_LAUNCH received. Activating.')
             self.activate()
+        elif command == 'STATIC_LAUNCH' and not self.static:
+            self.get_logger().info('STATIC_LAUNCH received. Activating static mode.')
+            self.activate_static()
+
+    # ── Static activation ──────────────────────────────────────
+
+    def activate_static(self):
+        self.static = True
+        self.static_shots_fired = 0
+
+        self.send_serial_command('SPIN')
+        self.get_logger().info('Static mode: spinning up, firing 3 balls with 5.5s delay.')
+
+        # Fire first ball immediately (after a brief spin-up moment)
+        self.static_fire_timer = self.create_timer(0.5, self.static_fire_once)
+
+    def static_fire_once(self):
+        """Fire one ball, then schedule the next or finish."""
+        # Cancel the one-shot timer that triggered this call
+        self.static_fire_timer.cancel()
+        self.static_fire_timer = None
+
+        if not self.static:
+            return
+
+        self.static_shots_fired += 1
+        self.get_logger().info(
+            f'Static FIRE! (shot {self.static_shots_fired}/3)'
+        )
+        self.send_serial_command('FIRE')
+
+        if self.static_shots_fired >= 3:
+            self.get_logger().info('Static launch complete.')
+            self.send_serial_command('STOP')
+            self.static = False
+            status = String()
+            status.data = 'LAUNCH_DONE'
+            self.status_pub.publish(status)
+            self.get_logger().info('Published: LAUNCH_DONE')
+        else:
+            # Schedule the next shot after cooldown
+            self.static_fire_timer = self.create_timer(5.5, self.static_fire_once)
+
+    # ── Dynamic Activation ──────────────────────────────────────────────
 
     def activate(self):
         self.active = True
@@ -167,6 +216,7 @@ class DynamicLauncherNode(Node):
         self.timeout_timer = self.create_timer(self.node_timeout, self.on_timeout)
         self.timeout_timer  # one-shot handled in callback
 
+
     # ── Marker detection ──────────────────────────────────────────────
 
     def marker_callback(self, msg: Int32):
@@ -174,54 +224,70 @@ class DynamicLauncherNode(Node):
         self.current_marker_id = msg.data
 
     def check_for_marker(self):
-        """Poll TF tree for the target aruco marker."""
+        """Poll TF tree for the target aruco marker, only firing on fresh transforms."""
         if not self.active or self.waiting_to_fire:
             return
 
-        # Enforce cooldown between consecutive shots
         if self.last_fire_time is not None:
             elapsed = self.get_clock().now() - self.last_fire_time
             if elapsed.nanoseconds / 1e9 < self.shot_cooldown:
                 return
 
         target_frame = f'aruco_marker_{self.target_id}'
+        FRESHNESS_THRESHOLD = 0.2  # seconds — treat transform as stale if older than this
 
         try:
-            # Check if target marker exists in TF tree
-            frames = self.tf_buffer.all_frames_as_string()
-            marker_frames = re.findall(r'aruco_marker_(\d+)', frames)
+            now = self.get_clock().now()
 
-            if str(self.target_id) in marker_frames:
-                # Optionally verify with /current_marker topic as well
-                transform = self.tf_buffer.lookup_transform(
-                    'base_link',
-                    target_frame,
-                    rclpy.time.Time()
-                )
+            transform = self.tf_buffer.lookup_transform(
+                'base_link',
+                target_frame,
+                rclpy.time.Time(),          # get latest available
+            )
 
-                self.get_logger().info(
-                    f'Marker {self.target_id} detected. '
-                    f'Waiting {self.launch_delay}s before firing...'
-                )
-                self.waiting_to_fire = True
+            # Check how old the transform actually is
+            tf_stamp = rclpy.time.Time.from_msg(transform.header.stamp)
+            age = (now - tf_stamp).nanoseconds / 1e9
 
-                # Wait before firing (lead time for moving target)
-                self.delay_timer = self.create_timer(self.launch_delay, self.fire)
+            if age > FRESHNESS_THRESHOLD:
+                # Transform exists in buffer but is stale — marker not currently visible
+                return
+
+            self.get_logger().info(
+                f'Marker {self.target_id} detected (age={age:.3f}s). '
+                f'Waiting {self.launch_delay}s before firing...'
+            )
+            self.waiting_to_fire = True
+            self.delay_timer = self.create_timer(self.launch_delay, self.fire)
 
         except Exception:
-            # Marker not yet visible
-            pass
+            pass  # transform not in buffer at all yet
 
     # ── Firing sequence ───────────────────────────────────────────────
 
     def fire(self):
-        """Send FIRE command after delay."""
-        # Cancel the one-shot delay timer
         if self.delay_timer is not None:
             self.delay_timer.cancel()
             self.delay_timer = None
 
         if not self.active:
+            return
+
+        # Re-check freshness before actually firing
+        target_frame = f'aruco_marker_{self.target_id}'
+        FRESHNESS_THRESHOLD = 0.2
+        try:
+            now = self.get_clock().now()
+            transform = self.tf_buffer.lookup_transform('base_link', target_frame, rclpy.time.Time())
+            tf_stamp = rclpy.time.Time.from_msg(transform.header.stamp)
+            age = (now - tf_stamp).nanoseconds / 1e9
+            if age > FRESHNESS_THRESHOLD:
+                self.get_logger().warn(f'Marker {self.target_id} stale at fire time (age={age:.3f}s). Aborting.')
+                self.waiting_to_fire = False
+                return
+        except Exception:
+            self.get_logger().warn(f'Marker {self.target_id} lost before firing. Aborting.')
+            self.waiting_to_fire = False
             return
 
         self.shots_fired += 1

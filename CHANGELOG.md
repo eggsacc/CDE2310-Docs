@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - BOM
 - Updated launcher electronics controller schematic
 - Added dynamic launching node to shoot when aruco detected
+- Removed the rejection of tf transforms older than 0.5s for docking 
+- Increased threshold to trigger DOCK_FAIL from 5 (0.5s) consecutive failed tf lookups to 20 (2s)
   
 ## [1.0.0] - 2026-04-07
 
