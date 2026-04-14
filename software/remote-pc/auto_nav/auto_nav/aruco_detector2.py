@@ -76,6 +76,21 @@ class ArucoDetector(Node):
         # tf2 broadcaster for marker transforms
         self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
 
+        # # Static transform: camera_link -> camera_optical_frame (REP-103 optical convention)
+        # self.static_tf_broadcaster = tf2_ros.StaticTransformBroadcaster(self)
+        # static_tf = TransformStamped()
+        # static_tf.header.stamp = self.get_clock().now().to_msg()
+        # static_tf.header.frame_id = "camera_link"
+        # static_tf.child_frame_id = "camera_optical_frame"
+        # static_tf.transform.translation.x = 0.0
+        # static_tf.transform.translation.y = 0.0
+        # static_tf.transform.translation.z = 0.0
+        # static_tf.transform.rotation.x = -0.5
+        # static_tf.transform.rotation.y = 0.5
+        # static_tf.transform.rotation.z = -0.5
+        # static_tf.transform.rotation.w = 0.5
+        # self.static_tf_broadcaster.sendTransform(static_tf)
+
         # Aruco dictionary and detector parameters
         self.dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
         self.parameters = cv2.aruco.DetectorParameters_create()
@@ -83,13 +98,13 @@ class ArucoDetector(Node):
         # Load camera calibration data
         # calib_data = np.load("/home/grp5/turtlebot3_ws/src/aruco_detector/aruco_detector/camera_calib.npz")
         self.camera_matrix = np.array([
-            [466.416038, 0.0, 151.411726],
-            [0.0, 470.9717072, 102.203053],
+            [635.210233, 0.0, 396.543658],
+            [0.0, 635.546243, 304.303293],
             [0.0, 0.0, 1.0]
         ], dtype=np.float64)
         
         self.dist_coeffs = np.array(
-            [0.354007, 0.289551, -0.045669, -0.010727, 0.0],
+            [0.166921, -0.270836, 0.001464, 0.000397, 0.0],
             dtype=np.float64
         )
         # Frame buffer & msg stamp

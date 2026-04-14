@@ -18,11 +18,12 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 # Set show_logs=True to see console output for that node
 NODES_TO_LAUNCH = [
     ("FSM Controller", "ros2 run auto_nav fsm_controller", True),
+    ("Aruco Detector", "ros2 run auto_nav aruco_detector2 --ros-args -p verbose:=False -p marker_size:=0.1", False),  # Show logs for Aruco detection
     ("Docking", "ros2 run auto_nav docking --ros-args -p verbose:=True", True),
     ("Cartographer", "ros2 launch turtlebot3_cartographer cartographer.launch.py", False),
     ("Navigation", "ros2 launch turtlebot3_navigation2 navigation2.launch.py", False),
     ("Exploration", "ros2 run auto_nav exploration", True),  # Show logs for exploration
-    ("Aruco Detector", "ros2 run auto_nav aruco_detector2 --ros-args -p verbose:=False -p marker_size:=0.05", False),  # Show logs for Aruco detection
+    ("dynamic_launch", "ros2 run auto_nav dynamic_launch", True),  # Show logs for dynamic launch
     # Add more nodes as needed, uncomment or add new ones
 ]
 
