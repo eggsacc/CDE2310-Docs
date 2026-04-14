@@ -1,7 +1,7 @@
 # Interface Control Document (ICD)
 
-**Version:** 1.0.1 
-**Last updated:** 2026-04-13 
+**Version:** 1.1.0
+**Last updated:** 2026-04-14
 **Author:** Wang Yizhang  
 **Status:** Draft  
 
@@ -43,7 +43,7 @@ Runs ROS 2 nodes and mission logic.
 - `fsm_controller`
 - `exploration`
 - `docking`
-- `aruco_detector`
+- `aruco_detector2`
 
 **Raspberry Pi 4B**
 - `launcher_cmd`
@@ -69,6 +69,7 @@ Electrical interfaces and power distribution.
 - 5 V logic rail for servo and OLED
 - 6 V motor rail from buck converter
 - 11.1 V LiPo to OpenCR
+- 9V battery cell
 - Common ground shared across launcher electronics
 
 ---
@@ -244,7 +245,7 @@ The button is used to toggle or confirm local launcher configuration modes.
 | Raspberry Pi | 5 V from OpenCR |
 | Servo | 5 V from Arduino rail |
 | OLED | 5 V from Arduino rail |
-| Flywheel motor | 6 V rail from buck converter |
+| Flywheel motor | 6 V rail from buck converter connected to 9V battery|
 | Motor source rail | Derived from OpenCR 12 V output |
 
 ### 8.2 Grounding
@@ -259,7 +260,7 @@ All launcher electronics share a **common ground**, including:
 
 ### 8.3 Voltage conversion
 
-The flywheel motor does not run directly from the OpenCR output. The OpenCR 12 V output is stepped down through a micro buck converter to a regulated 6 V motor rail.
+The flywheel motor does not run directly from the OpenCR output. A separate 9V battery is stepped down through a micro buck converter to a regulated 6 V motor rail.
 
 ---
 
