@@ -101,7 +101,7 @@ class DynamicLauncherNode(Node):
 
         # ── Parameters ────────────────────────────────────────────────
         self.declare_parameter('target_marker_id', 5)
-        self.declare_parameter('launch_delay', 1.0)
+        self.declare_parameter('launch_delay', 0.1)
         self.declare_parameter('node_timeout', 30.0)
         self.declare_parameter('max_shots', 3)
         self.declare_parameter('shot_cooldown', 2.0)
