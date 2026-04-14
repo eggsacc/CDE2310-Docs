@@ -44,9 +44,11 @@ Runs ROS 2 nodes and mission logic.
 - `exploration`
 - `docking`
 - `aruco_detector2`
+- `dynamic_launch` (handles both static and dynamic launch sequencing)
 
 **Raspberry Pi 4B**
-- `launcher_cmd`
+- Camera driver (publishes `/camera/image_raw/compressed`)
+- Arduino serial bridge (relays `/arduino_cmd` ↔ USB serial, republishes replies on `/arduino_response`)
 
 ### 3.2 Hardware Subsystem
 Physical computing and mechatronic devices.
@@ -80,7 +82,8 @@ Electrical interfaces and power distribution.
 |---|---|---|---|
 | IF-01 | SW ↔ SW | `/states` | Mission command topic |
 | IF-02 | SW ↔ SW | `/operation_status` | Execution feedback topic |
-| IF-03 | SW ↔ HW | USB serial (`/dev/arduino_launcher`) | Raspberry Pi to Arduino launcher control |
+| IF-03a | SW ↔ SW | `/arduino_cmd`, `/arduino_response` | Remote-PC launch primitives + Arduino replies (bridged on the RPi) |
+| IF-03 | SW ↔ HW | USB serial (`/dev/arduino_launcher`) | Raspberry Pi bridge to Arduino launcher control |
 | IF-04 | HW ↔ EL | Arduino PWM output to motor stage | Flywheel speed control |
 | IF-05 | HW ↔ EL | Arduino servo output | Ball feeding mechanism |
 | IF-06 | HW ↔ EL | Arduino analog input | Potentiometer tuning input |
@@ -96,24 +99,25 @@ Electrical interfaces and power distribution.
 
 - **Type:** `std_msgs/String`
 - **Publisher:** `fsm_controller`
-- **Subscribers:** `exploration`, `docking`, `launcher_cmd`
+- **Subscribers:** `exploration`, `docking`, `dynamic_launch`
 
 **Valid values**
 - `EXPLORE`
-- `DOCK`
+- `EXPLORE_<id>` (marker-directed exploration)
+- `DOCK_<id>`
 - `STATIC_LAUNCH`
 - `DYNAMIC_LAUNCH`
 - `END`
 
-**Description**  
-This is the main command topic used by the FSM to activate the appropriate software node for each mission phase.
+**Description**
+This is the main command topic used by the FSM to activate the appropriate software node for each mission phase. `<id>` is the integer ArUco marker ID the FSM has locked onto (e.g. `DOCK_1`, `EXPLORE_2`).
 
 ---
 
 ### 5.2 `/operation_status`
 
 - **Type:** `std_msgs/String`
-- **Publishers:** `docking`, `launcher_cmd`
+- **Publishers:** `docking`, `dynamic_launch`
 - **Subscriber:** `fsm_controller`
 
 **Valid values**
@@ -122,9 +126,24 @@ This is the main command topic used by the FSM to activate the appropriate softw
 - `TIMEOUT`
 - `LAUNCH_DONE`
 - `LAUNCH_TIMEOUT`
+- `LAUNCH_INCOMPLETE`
+- `NAV_FAIL`
+- `MARKER_LOST`
+- `MAP_DONE`
 
-**Description**  
-This topic reports task completion or failure back to the FSM. The FSM uses it to decide whether to continue, retry, or end the mission.
+**Description**
+This topic reports task completion or failure back to the FSM. The FSM uses it to decide whether to continue, retry, skip the current marker, or end the mission.
+
+---
+
+### 5.3 `/arduino_cmd` and `/arduino_response`
+
+- **Types:** both `std_msgs/String`
+- **`/arduino_cmd`** — published by `dynamic_launch` on the remote PC, subscribed by the RPi serial bridge; values: `SPIN`, `FIRE`, `STOP`.
+- **`/arduino_response`** — published by the RPi serial bridge with the Arduino's raw text reply (logging / debug only).
+
+**Description**
+All launcher shot sequencing is performed on the remote PC. The RPi bridge merely forwards the primitive command over USB serial and republishes the Arduino's text reply back onto ROS.
 
 ---
 
