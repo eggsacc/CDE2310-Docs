@@ -2,11 +2,13 @@
 
 ## Overview
 
-The system is controlled using a Finite State Machine (FSM) implemented in the `fsm_controller` node.
-
-The FSM coordinates navigation, perception (ArUco detection), docking, and launching subsystems to execute the mission autonomously. Communication between subsystems is centralized via a unified `/operation_status` topic.
-
-Unlike a fixed-state FSM (e.g., DOCK_A, DOCK_B), this implementation dynamically handles multiple markers using marker IDs (e.g., `DOCK_3`, `LAUNCH_3`).
+The mission is orchestrated by the `fsm_controller` node. It publishes
+the active mission state on `/states`, listens for execution feedback
+on `/operation_status`, and polls the TF tree directly for ArUco
+markers (frames `aruco_marker_<id>`) to decide when to break out of
+exploration and begin docking. Unlike a hard-coded state set, docking
+and exploration are parameterised by the detected marker ID
+(e.g. `DOCK_3`, `EXPLORE_1`).
 
 ---
 
@@ -17,42 +19,31 @@ Unlike a fixed-state FSM (e.g., DOCK_A, DOCK_B), this implementation dynamically
 
 ## State Definitions
 
-### INIT
-System startup and initialization of all ROS2 nodes.
+### EXPLORE / EXPLORE_<id>
+Robot runs frontier-based exploration. While in this state the FSM
+continuously polls the TF tree for known markers (`aruco_marker_<id>`)
+and publishes the matching exploration sub-state:
 
----
+- `EXPLORE` — no marker targeted yet; pure frontier search.
+- `EXPLORE_<id>` — a marker is visible but still further than the
+  docking trigger threshold (0.8 m); the exploration node is told to
+  head toward it while continuing frontier search.
 
-### EXPLORE
-Robot performs exploration (e.g., frontier-based with Nav2) while searching for ArUco markers.
+Completed markers are added to a skip list and never re-detected.
 
-- Subscribes to `/aruco_pose`
-- Detects markers and extracts marker ID
-- Publishes marker ID on `/current_marker`
-- Transitions to docking when a marker is detected
+### DOCK_<id>
+Triggered when a locked-on marker comes within 0.8 m of `base_link`.
+Docking is executed by `docking_node` (three-phase: odom → TF →
+LIDAR). Up to 2 dock attempts are allowed per marker.
 
----
+### STATIC_LAUNCH / DYNAMIC_LAUNCH
+Dispatched after `DOCK_DONE` based on the docked marker ID:
 
-### DOCK_<marker_id>
-Robot docks at the detected station using the ArUco marker.
-
-- Triggered dynamically (e.g., `DOCK_3`, `DOCK_5`)
-- Docking handled by `docking_node`
-- Uses TF + LIDAR-based multi-phase docking
-- FSM tracks docking attempts for fault tolerance
-
----
-
-### LAUNCH_<marker_id>
-Robot performs payload delivery (e.g., launching ping pong balls).
-
-- Triggered after docking completes or times out
-- Marker ID is preserved (e.g., `LAUNCH_3`)
-- On completion, increments delivered marker count
-
----
+- Marker 1 → `STATIC_LAUNCH`
+- Marker 2 → `DYNAMIC_LAUNCH`
 
 ### END
-Mission complete. Robot stops all operations.
+Mission complete. FSM logs "Mission Complete!" and stops transitioning.
 
 ---
 
@@ -60,92 +51,61 @@ Mission complete. Robot stops all operations.
 
 ### Normal Operation
 
-- INIT → EXPLORE (after initialization)
-- EXPLORE → DOCK_<id> (when marker is detected)
-- DOCK_<id> → LAUNCH_<id> (on `DOCK_DONE`)
-- LAUNCH_<id> → EXPLORE (on `LAUNCH_DONE`)
-- EXPLORE → END (when map explored AND required markers completed)
+- `EXPLORE` → `EXPLORE_<id>` when a marker is spotted beyond 0.8 m
+- `EXPLORE*` → `DOCK_<id>` when the target marker is within 0.8 m
+- `DOCK_<id>` → `STATIC_LAUNCH` / `DYNAMIC_LAUNCH` on `DOCK_DONE`
+- `STATIC_LAUNCH` / `DYNAMIC_LAUNCH` → `EXPLORE` on `LAUNCH_DONE`
 
 ---
 
-### Error Handling & Recovery
+### Error Handling
 
-The FSM incorporates fault handling using `/operation_status`.
+Error feedback is received on `/operation_status`:
 
-#### Docking Failures
-- `DOCK_FAIL`:
-  - Retry docking **once**
-  - If failure occurs twice → transition to `END`
-
-#### Docking Timeout
-- `TIMEOUT`:
-  - Assumed robot is sufficiently aligned
-  - FSM proceeds directly to `LAUNCH_<id>`
-
-#### Navigation Failures
-- `NAV_FAIL`:
-  - Return to `EXPLORE`
-
-#### Launch Failures
-- `LAUNCH_FAIL`:
-  - Retry launch in the same state
-
-#### Marker Loss
-- `MARKER_LOST`:
-  - Return to `EXPLORE`
+- `DOCK_FAIL` — retry docking up to 2 attempts total. If the second
+  attempt also fails, the marker is added to the completed set (so it
+  is skipped in future) and the FSM returns to `EXPLORE`.
+- `TIMEOUT` — return to `EXPLORE`, clear target marker, reset dock
+  attempt counter.
+- `LAUNCH_FAIL` — re-publish the relevant launch state
+  (`STATIC_LAUNCH` / `DYNAMIC_LAUNCH`).
+- `NAV_FAIL`, `MARKER_LOST` — return to `EXPLORE`.
 
 ---
 
-## Communication Architecture
+## Communication
 
 ### Topics
 
-| Topic | Type | Description |
-|------|------|------------|
-| `/states` | String | FSM state commands (e.g., `DOCK_3`) |
-| `/operation_status` | String | Feedback from subsystems |
-| `/aruco_pose` | PoseStamped | Marker detection input |
-| `/current_marker` | Int32 | Current marker ID |
+| Topic | Type | Direction | Description |
+|------|------|-----------|------------|
+| `/states` | `std_msgs/String` | FSM → nodes | Mission state commands (`EXPLORE`, `EXPLORE_<id>`, `DOCK_<id>`, `STATIC_LAUNCH`, `DYNAMIC_LAUNCH`, `END`) |
+| `/operation_status` | `std_msgs/String` | nodes → FSM | Feedback strings (see below) |
 
----
+### `/operation_status` values
 
-### Message Protocol (`/operation_status`)
+**Success:** `DOCK_DONE`, `LAUNCH_DONE`, `MAP_DONE`
 
-#### Success Messages
-- `DOCK_DONE`
-- `LAUNCH_DONE`
-- `MAP_DONE`
+**Errors:** `DOCK_FAIL`, `LAUNCH_FAIL`, `NAV_FAIL`, `MARKER_LOST`,
+`TIMEOUT`, `LAUNCH_TIMEOUT`, `LAUNCH_INCOMPLETE`
 
-#### Error Messages
-- `DOCK_FAIL`
-- `LAUNCH_FAIL`
-- `NAV_FAIL`
-- `MARKER_LOST`
-- `TIMEOUT`
+### Marker discovery
+
+The FSM reads the TF tree directly (it does not subscribe to a
+dedicated marker topic). Every 0.5 s it scans for `aruco_marker_<id>`
+frames, looks up the transform to `base_link`, and uses the Euclidean
+distance to decide between `EXPLORE_<id>` and `DOCK_<id>`.
 
 ---
 
 ## Key Design Features
 
-### Dynamic Marker Handling
-- No hardcoded stations (A/B)
-- Scales to any number of markers
-
-### Centralized Feedback Channel
-- All subsystems report to `/operation_status`
-- Simplifies debugging and integration
-
-### Fault-Tolerant Execution
-- Controlled retry logic for docking
-- Graceful fallback on timeout
-- No infinite retry loops
-
-### Decoupled Architecture
-- FSM = decision-making layer
-- Execution handled by separate nodes (Nav2, docking, launcher)
-
----
-
-## Summary
-
-The FSM provides a robust, scalable, and modular control architecture for autonomous mission execution. By combining dynamic state representation, centralized communication, and fault handling—including retry logic and timeout-based fallback—the system achieves reliable operation in uncertain environments.
+- **Dynamic marker handling** — `DOCK_<id>`, `EXPLORE_<id>` scale to
+  any marker without hard-coded stations.
+- **Target locking** — once a marker is seen beyond the docking
+  threshold, the FSM locks onto that ID until completion, ignoring
+  other markers.
+- **Completed-marker skip list** — a marker that succeeds (or fails
+  twice) is added to `completed_markers` and never re-selected.
+- **Fault tolerance** — bounded dock retries, `TIMEOUT`-to-explore
+  fallback, and graceful mission-end on unrecoverable errors.
