@@ -2,6 +2,7 @@
 //  Flywheel Launcher Subsystem — simplified (no PI control)
 //  Target: Arduino Uno/Nano
 //  Interface: Raspberry Pi via USB Serial
+//  Motor Driver: L298N (ENA=D11 PWM, IN1=D5, IN2=D6)
 // ============================================================
 //
 //  SERIAL COMMAND PROTOCOL (from RPi)
@@ -27,7 +28,9 @@
 #include <GyverOLED.h>
 
 // ── Pin Definitions ──────────────────────────────────────────
-#define PIN_MOTOR_PWM   11    // MOSFET gate (Timer2 PWM)
+#define PIN_MOTOR_PWM  11     // L298N ENA (Timer2 PWM, speed control)
+#define PIN_MOTOR_INA   5     // L298N IN1 (direction)
+#define PIN_MOTOR_INB   6     // L298N IN2 (direction)
 #define PIN_SERVO       9     // Servo signal
 #define PIN_POT         A0    // Potentiometer (config mode)
 #define PIN_BUTTON      8     // Mode toggle (polled, external pull-down)
@@ -98,10 +101,22 @@ void pollButton() {
 }
 
 // ============================================================
-//  Motor
+//  Motor — L298N control
+//  Direction is hardcoded (INA=HIGH, INB=LOW).
+//  Swap motor wires physically if direction is wrong.
+//  When duty=0, both direction pins driven LOW (brake).
 // ============================================================
 void setMotorPWM(int duty) {
   pwmDuty = constrain(duty, PWM_MIN, PWM_MAX);
+
+  if (pwmDuty == 0) {
+    digitalWrite(PIN_MOTOR_INA, LOW);
+    digitalWrite(PIN_MOTOR_INB, LOW);
+  } else {
+    digitalWrite(PIN_MOTOR_INA, HIGH);
+    digitalWrite(PIN_MOTOR_INB, LOW);
+  }
+
   analogWrite(PIN_MOTOR_PWM, pwmDuty);
 }
 
@@ -275,7 +290,12 @@ void setup() {
   Serial.begin(115200);
   Serial.setTimeout(50);
 
+  // L298N motor driver pins
   pinMode(PIN_MOTOR_PWM, OUTPUT);
+  pinMode(PIN_MOTOR_INA, OUTPUT);
+  pinMode(PIN_MOTOR_INB, OUTPUT);
+  digitalWrite(PIN_MOTOR_INA, LOW);
+  digitalWrite(PIN_MOTOR_INB, LOW);
   analogWrite(PIN_MOTOR_PWM, 0);
 
   feederServo.attach(PIN_SERVO);
