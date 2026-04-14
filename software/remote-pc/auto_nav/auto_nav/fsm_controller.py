@@ -22,6 +22,7 @@ class FSMNode(Node):
         self.marker_detected = False
         self.marker_count = 0
         self.required_markers = 2  # Only marker 1 & 2 required for main mission
+        self.valid = (1, 2)
         self.map_explored = False
 
         self.marker_id = None
@@ -201,6 +202,9 @@ class FSMNode(Node):
             for marker_id_str in marker_ids:
                 marker_id = int(marker_id_str)
 
+                if marker_id not in self.valid:
+                    continue
+
                 # 🚫 Ignore completed markers
                 if marker_id in self.completed_markers:
                     continue
@@ -238,7 +242,7 @@ class FSMNode(Node):
                     return
 
             marker_id, distance = detected_markers[0]
-            threshold = 0.8
+            threshold = 500
 
             if self.state == "EXPLORE" or self.state.startswith("EXPLORE_"):
 
