@@ -240,7 +240,7 @@ class FSMNode(Node):
             marker_id, distance = detected_markers[0]
             threshold = 0.8
 
-            if self.state == "EXPLORE":
+            if self.state == "EXPLORE" or self.state.startswith("EXPLORE_"):
 
                 if distance >= threshold:
                     if self.target_marker is None:
