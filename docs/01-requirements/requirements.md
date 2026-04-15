@@ -55,7 +55,7 @@ It is designed to navigate an unknown indoor environment, construct a map, local
 - The ArUco smarkers shall be well-lit for the cameras to detect them.
 - The robot shall operate in an indoor warehouse-like environment with a maze configuration.
 
-## 1.7 Saftey Requirements
+## 1.7 Safety Requirements
 
 - The robot shall be caught if robot starts damaging the maze.
 - The system may be interupted/terminated with ctrl-c

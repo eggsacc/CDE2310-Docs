@@ -101,7 +101,7 @@ class DynamicLauncherNode(Node):
 
         # ── Parameters ────────────────────────────────────────────────
         self.declare_parameter('target_marker_id', 5)
-        self.declare_parameter('launch_delay', 1.0)
+        self.declare_parameter('launch_delay', 0.1)
         self.declare_parameter('node_timeout', 30.0)
         self.declare_parameter('max_shots', 3)
         self.declare_parameter('shot_cooldown', 2.0)
@@ -138,6 +138,7 @@ class DynamicLauncherNode(Node):
         self.static             = False
         self.static_shots_fired = 0
         self.static_fire_timer  = None
+        self.stop_timer = None
 
         # ── Timers (created on activation) ────────────────────────────
         self.timeout_timer      = None
@@ -207,12 +208,21 @@ class DynamicLauncherNode(Node):
         self.send_arduino_cmd('FIRE')
 
         if self.static_shots_fired >= 3:
-            self.get_logger().info('Static launch complete.')
-            self.send_arduino_cmd('STOP')
-            self.static = False
-            self._publish_status('LAUNCH_DONE')
+            self.stop_timer = self.create_timer(3.0, self.static_stop)
+            
         else:
             self.static_fire_timer = self.create_timer(5.5, self.static_fire_once)
+
+    def static_stop(self):
+        if self.stop_timer is not None:
+            self.stop_timer.cancel()
+            self.stop_timer = None
+
+        self.get_logger().info('Stopping launcher after delay.')
+
+        self.send_arduino_cmd('STOP')
+        self.static = False
+        self._publish_status('LAUNCH_DONE')
 
     # ── Dynamic mode ──────────────────────────────────────────────────
 

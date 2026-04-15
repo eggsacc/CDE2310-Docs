@@ -117,7 +117,7 @@ class ExplorerNode(Node):
             self.target_marker = None  # Normal frontier exploration
             # self.get_logger().info("Status set to EXPLORE")
         elif msg.data == "EXPLORE_0": 
-            self.status_flag = True
+            self.status_flag = True 
             self.target_marker = 0  # Normal frontier exploration
             # self.get_logger().info("Status set to EXPLORE")
         elif msg.data == "EXPLORE_1":
@@ -163,49 +163,33 @@ class ExplorerNode(Node):
         Stores full pose: (x, y, z, qx, qy, qz, qw)
         """
         import re
-        
+        # self.get_logger().info("Checking for aruco marker frames...")
         try:
             frames = self.tf_buffer.all_frames_as_string()
             
-            if marker_id is not None:
-                marker_frame = f"aruco_marker_{marker_id}"
-                if marker_frame in frames:
-                    try:
-                        trans = self.tf_buffer.lookup_transform('map', marker_frame, rclpy.time.Time())
-                        x  = trans.transform.translation.x
-                        y  = trans.transform.translation.y
-                        z  = trans.transform.translation.z
-                        qx = trans.transform.rotation.x
-                        qy = trans.transform.rotation.y
-                        qz = trans.transform.rotation.z
-                        qw = trans.transform.rotation.w
+            marker_frames = re.findall(r'aruco_marker_(\d+)', frames)
+            
+            for marker_id_str in marker_frames:
+                mid = int(marker_id_str)
+                marker_frame = f"aruco_marker_{mid}"
+                # self.get_logger().info(f"Checking for marker frame: {marker_frame}.")
+                try:
+                    trans = self.tf_buffer.lookup_transform('map', marker_frame, rclpy.time.Time())
+                    x  = trans.transform.translation.x
+                    y  = trans.transform.translation.y
+                    z  = trans.transform.translation.z
+                    qx = trans.transform.rotation.x
+                    qy = trans.transform.rotation.y
+                    qz = trans.transform.rotation.z
+                    qw = trans.transform.rotation.w
 
-                        # Store full pose so we can reconstruct facing direction later
-                        self.aruco_marker_locations[marker_id] = (x, y, z, qx, qy, qz, qw)
+                    self.aruco_marker_locations[mid] = (x, y, z, qx, qy, qz, qw)
 
-                    except TransformException as e:
-                        self.get_logger().debug(f"Could not get transform for marker {marker_id}: {e}")
+                    # self.get_logger().info(f"Stored location for {mid}: x={x:.2f}, y={y:.2f}, z={z:.2f}")
 
-            else:
-                marker_frames = re.findall(r'aruco_marker_(\d+)', frames)
-                
-                for marker_id_str in marker_frames:
-                    mid = int(marker_id_str)
-                    marker_frame = f"aruco_marker_{mid}"
-                    try:
-                        trans = self.tf_buffer.lookup_transform('map', marker_frame, rclpy.time.Time())
-                        x  = trans.transform.translation.x
-                        y  = trans.transform.translation.y
-                        z  = trans.transform.translation.z
-                        qx = trans.transform.rotation.x
-                        qy = trans.transform.rotation.y
-                        qz = trans.transform.rotation.z
-                        qw = trans.transform.rotation.w
-
-                        self.aruco_marker_locations[mid] = (x, y, z, qx, qy, qz, qw)
-
-                    except TransformException:
-                        continue
+                except TransformException:
+                    # self.get_logger().info(f"Marker frame {marker_frame} not found yet.")
+                    continue
 
             return self.aruco_marker_locations
 
@@ -452,6 +436,7 @@ class ExplorerNode(Node):
 
     def explore(self):
         # Handle marker-specific exploration
+        self.get_logger().info(f"{self.target_marker}")
         if self.target_marker is not None:
             # Navigate to specific marker (1 or 2)
             if self.target_marker in self.aruco_marker_locations:
@@ -505,8 +490,8 @@ class ExplorerNode(Node):
         goal_x = chosen_frontier[1] * self.map_data.info.resolution + self.map_data.info.origin.position.x
         goal_y = chosen_frontier[0] * self.map_data.info.resolution + self.map_data.info.origin.position.y
 
-        if self.prev_goal is None:
-            self.prev_goal = (goal_x, goal_y)
+        # if self.prev_goal is None:
+        #     self.prev_goal = (goal_x, goal_y)
 
         # Navigate to the chosen frontier once goal is reached or after 10 seconds
         if self.flag or time.time() - self.time > 10:
