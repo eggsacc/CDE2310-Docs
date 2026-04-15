@@ -1,26 +1,34 @@
 ## Autonomous Exploration
 
 ### SLAM and Navigation2
-In this project, SLAM is implemented using ROS 2 on the TurtleBot3 platform. The TurtleBot3 is equipped with a 2D LiDAR sensor, wheel encoders, and an onboard IMU (SLAM, 2023). These sensors provide laser scan data for obstacle detection and mapping (/scan), odometry data for motion estimation (/odom) and IMU data for orientation refinement.
+In this project, SLAM is implemented on top of ROS 2 on the TurtleBot3 platform. The TurtleBot3 is equipped with a 2D LiDAR sensor, wheel encoders, and an onboard IMU. These sensors provide laser scan data for obstacle detection and mapping (`/scan`), odometry data for motion estimation (`/odom`), and IMU data for orientation refinement.
 
-The SLAM process is carried out using SLAM Toolbox, which performs graph-based SLAM. Robot poses are represented as nodes in a graph and sensor constraints are used to optimize the map. This approach improves accuracy by reducing accumulated drift over time. (from [slam_toolbox, n.d.](https://docs.ros.org/en/humble/p/slam_toolbox/))
+The active mapping stack is **Cartographer** (launched via `turtlebot3_cartographer.launch.py`), which performs real-time graph-based SLAM. Robot poses are represented as nodes in a graph and sensor constraints are used to optimise the map, reducing accumulated drift.
 
-After the map is generated, the navigation stack Navigation2 (Nav2) is used for path planning and obstacle avoidance. Nav2 utilises the static map from SLAM, real-time costmaps for obstacle updates, a global planner to compute optimal paths and a local planner to generate safe velocity commands
-
-This enables the autonomous mobile robot (AMR) to autonomously navigate between **Station A**, **Station B**, and the optional **Station C** without prior knowledge of the maze layout.
+After the map is generated, the **Navigation2 (Nav2)** stack handles path planning and obstacle avoidance. Nav2 consumes the live occupancy grid from Cartographer, maintains real-time costmaps, and exposes the `NavigateToPose` action used by this node for all goal dispatch.
 
 ### Frontier-Based Exploration
-Frontier exploration is a widely adopted strategy for autonomous mapping. A frontier is defined as the boundary between known free space and unknown space in an occupancy grid map. By continuously identifying and navigating toward these frontiers, the robot incrementally reveals unexplored regions until the environment is fully mapped.
+A frontier is the boundary between known free space and unknown space in the occupancy grid. The explorer incrementally drives the robot toward these frontiers until the map is sufficiently complete.
 
 ![Exploration Diagram](assets/exploration_diagram.png)
 
-The workflow is as follows: 
-1. First there is Map Initialisation
-2. SLAM begins generating an occupancy grid using LiDAR and odometry data. 
-3. Unknown cells are gradually classified as free or occupied. 
-4. A frontier search algorithm scans the occupancy grid to identify boundary cells between explored and unexplored areas.
-5. Each frontier is then checked to count the number of neighboring frontiers, and distance to the robot's current position.
-6. Potential frontiers are selected based on >n number of neighbors and closes distance to the robot's current position.
-7. The selected frontier centroid is sent as a navigation goal to Nav2. 
-8. The robot then navigates to the selected frontier. 
-9. Upon reaching the frontier or after >m seconds (timeout), new areas become observable, and the cycle repeats until no significant frontiers remain.
+The workflow is as follows:
+1. Wait for `EXPLORE` (or `EXPLORE_<id>`) on `/states`.
+2. On each `/map` update the occupancy grid is scanned for frontier cells: free cells (value `0..49`) adjacent to an unknown cell (`-1`).
+3. Candidate frontiers are filtered: those too close to the robot (<1 m) or too close to walls (<1 cell from any occupied cell, where walls are cells with value ≥ 50) are rejected.
+4. For each remaining candidate, the number of nearby frontier neighbours (within 0.5 m) is counted. Frontiers with more than 5 neighbours are kept (this suppresses tiny isolated frontiers).
+5. Of the surviving candidates, the one with the **largest distance to the nearest wall** is selected as the navigation goal — this biases exploration away from tight corridors.
+6. The goal cell is converted to map coordinates and sent as a `NavigateToPose` goal to Nav2.
+7. A new goal is issued once the current one is reached (or after a 10 s timeout if progress stalls).
+
+### Marker storage and marker-directed exploration
+Alongside frontier search, the node continuously looks up every
+`aruco_marker_<id>` frame it sees in TF (relative to `map`) at 10 Hz
+and caches the full pose (position + quaternion). When the FSM
+publishes `EXPLORE_<id>` (where `<id>` identifies a marker that is
+already catalogued), the explorer switches from pure frontier search
+to a directed goal: it reconstructs the marker's facing direction from
+its stored orientation, offsets 0.5 m out along that facing direction,
+and dispatches a Nav2 goal facing back at the marker. While the marker
+is not yet catalogued, normal frontier exploration continues. Any
+non-`EXPLORE*` state cancels the current Nav2 goal.

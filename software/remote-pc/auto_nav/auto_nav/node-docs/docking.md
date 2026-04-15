@@ -2,18 +2,46 @@
 
 ## Three-Phase Autonomous Docking
 
-Docking is handled by `docking.py`, which navigates the TurtleBot3 to align precisely in front of an ArUco marker which will be pasted left of the target docking receptacle. The node is triggered via a `DOCK_<id>` message on `/states` and reports the outcome (`DOCK_DONE`, `DOCK_FAIL`, or `TIMEOUT`) on `/operation_status`. Docking proceeds through three sequential phases.
+Docking is handled by `docking.py`, which navigates the TurtleBot3
+into alignment in front of an ArUco marker pasted next to the target
+receptacle. The node is triggered by a `DOCK_<id>` message on
+`/states` and reports the outcome (`DOCK_DONE`, `DOCK_FAIL`, or
+`TIMEOUT`) on `/operation_status`. It runs a 10 Hz control loop and
+sequences three phases.
 
-**Phase 1 — Odometry Navigation to Standoff (20 cm Default)**  
-On receiving a dock command, the node queries the ArUco marker's pose via TF2 twice and rejects readings that differ by more than 15%, ensuring a stable initial estimate. It computes a goal point 20 cm in front of the marker along its normal vector, converts that point into the odometry frame, and drives there using proportional control. On arrival, it rotates to face the marker.
+**Phase 1 — Odometry Navigation to Standoff (45 cm along the marker
+normal)**
+On receiving a dock command, the node performs a single TF lookup of
+`aruco_marker_<id>` in the `base_link` frame, extracts the marker
+normal from the rotation matrix (projected to XY, flipped to point
+toward the robot), and computes a standoff goal `nav_standoff` metres
+(default 0.45 m) in front of the marker along that normal. The goal is
+then converted to the `odom` frame and driven to with P-control on
+translation and heading. Position tolerance is 5 cm; on arrival the
+robot rotates to face the marker. A 40 s Phase-1 timeout aborts the
+attempt if the standoff cannot be reached.
 
-**Phase 2 — TF-Based Fine Approach (20 cm → 15 cm Default)**  
-The node re-acquires the marker through TF2 with exponential moving average (EMA) smoothing applied to both position and orientation to reduce noise. It drives forward while blending two angular corrections: a bearing correction (to keep the marker centred at distance) and a heading alignment (to face the marker's normal up close). The phase completes once the robot holds lateral alignment within 0.5 cm for 0.5 s. If the marker is lost for more than 2 s, a 360° recovery spin is attempted; if the marker is not re-acquired by the end of the spin, docking is aborted.
+**Phase 2 — TF-Based Fine Approach (45 cm → 40 cm)**
+The node re-acquires the marker via TF with an exponential moving
+average (α = 0.35) applied to both position and normal. Angular
+control blends a bearing correction (keep marker centred) at distance
+with heading alignment (face the marker's normal) up close. The phase
+completes once the robot holds both lateral alignment within 3 cm and
+distance error within 3 cm for five consecutive ticks (0.5 s). If the
+marker is lost for more than ~2 s, a 360° recovery spin at 0.1 rad/s
+is performed while polling TF; if the marker is re-acquired the fine
+approach resumes, otherwise `DOCK_FAIL` is published.
 
-**Phase 3 — LIDAR Final Approach (15 cm → 8 cm)**  
-With heading already aligned from Phase 2, the node switches entirely to forward-facing LIDAR for distance measurement. Making use of the reading, the TurtleBot3 drives slowly to the 8 cm standoff distance and stops, then publishes `DOCK_DONE`.
+**Phase 3 — LIDAR Final Approach (to 20 cm)**
+Heading is already aligned from Phase 2's blended angular control, so
+Phase 3 uses only forward LIDAR (a 3° half-arc centred on 0 rad) for
+distance measurement and drives at a constant 1 cm/s until within the
+3 cm final tolerance of the 20 cm standoff distance, then publishes
+`DOCK_DONE`.
 
-A 45 s global safety timer aborts the sequence at any point if docking stalls and exceeds this 45s safety timer.
+A 120 s global safety timer aborts the sequence if it stalls, and the
+node will also bail out with `DOCK_FAIL` if either the odom TF or the
+marker TF lookup fails 50 times in a row.
 
 **Flowchart**
 ![Docking Flowchart](assets/docking_flowchart.png)
