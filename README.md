@@ -3,6 +3,8 @@
 [![Version](https://img.shields.io/badge/version-1.0.0-green)](https://github.com/eggsacc/CDE2310-Docs/releases/tag/v1.0.0)
 [![License](https://img.shields.io/badge/license-MIT-lightgrey)]()
 
+![grp5](assets/GRP5.jpg)
+
 ## Mission Overview
 The main objective of this project is to design, create and validate an autonomous mobile robot (AMR system) based on the Turtlebot3 system to simulate intralogistics operations in a simulated smart warehouse environment. The AMR system must be capable of autonomously navigating an unknown maze-like environment while constructing a map of the environment, localizing itself and carrying out a series of tasks to deliver three ping pong balls into pre identified receptacles (static and dynamic) without human intervention or line-following methods.
 
@@ -24,6 +26,12 @@ The main objective of this project is to design, create and validate an autonomo
 - RViz map screen recording is mandatory for all attempts
 
 ---
+
+## Robot
+
+Sexiest robot!
+
+![robot](assets/grp5-robot.png)
 
 ## Repository Structure
 
@@ -90,7 +98,7 @@ The main objective of this project is to design, create and validate an autonomo
 
 | Member | Role | GitHub |
 |--------|------|--------|
-| Member A | Software lead (ROS 2, SLAM, navigation) | @username |
+| Gary chen | Software lead (ROS 2, SLAM, navigation) | @garychen177 |
 | Wang yizhang | Hardware lead (payload mechanism) | @eggsacc |
 | Gregorius Nicholas Sutedja | Electronics lead (wiring, power, sensors) | @Nikidudu |
 | Garg Divyansh | Systems lead (SDD, ICD, testing, integration) | @garg-divyansh |
@@ -114,7 +122,7 @@ sudo apt install ros-humble-turtlebot3* ros-humble-navigation2 ros-humble-nav2-b
 ### Launch (full mission)
 
 ```bash
-ros2 launch g2_turtlebot mission.launch.py
+ros2 run auto_nav mainlaunch
 ```
 
 > A single launch file is targeted for the full robot operation (bonus scoring criterion v).
