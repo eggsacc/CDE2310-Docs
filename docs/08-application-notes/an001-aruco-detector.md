@@ -2,7 +2,7 @@
 AN-001 | v1.0 | 2026-04-05
 
 ## Purpose
-Documents how ArUco marker detection is configured on the G2 TurtleBot3,
+Documents how ArUco marker detection is configured on the TurtleBot,
 including camera calibration, detection parameters, and known limitations.
 
 ## Hardware
@@ -11,15 +11,26 @@ including camera calibration, detection parameters, and known limitations.
 
 ## How it works
 ArUco markers are detected using the `aruco_detector` ROS2 package. The node
-subscribes to `/camera/image_raw`, runs detection on received frames at a fixed frequency, and publishes
+subscribes to `/camera/image_compressed`, runs detection on received frames at a fixed frequency, and publishes
 the detected marker pose as a new link to the TF transform tree.
 
 ## Camera Calibration
-The camera is calibrated to a resolution of 800x600p. The camera intrinisics matrix can be found in the same directory as the source code:
+The camera is calibrated to a resolution of 800x600p. The camera intrinisics matrix is defined as a numpy matrix in the source code:
 
-```shell
-# REMOTE PC
-~/turtlebot3_ws/src/aruco_detector/aruco_detector/camera_calib.npz
+```python
+# REMOTE PC!
+# ~/turtlebot3_ws/src/auto_nav/auto_nav/aruco_detector2.py
+
+# ...
+self.camera_matrix = np.array([
+    [635.210233, 0.0, 396.543658],
+    [0.0, 635.546243, 304.303293],
+    [0.0, 0.0, 1.0]
+], dtype=np.float64)
+        
+self.dist_coeffs = np.array(
+    [0.166921, -0.270836, 0.001464, 0.000397, 0.0],
+    dtype=np.float64)
 ```
 
 ## ROS2 Parameters
@@ -27,7 +38,7 @@ The camera is calibrated to a resolution of 800x600p. The camera intrinisics mat
 |-----------|-------|-------|
 | `verbose` | `False` | Enable/disbale logger for debugging |
 | `marker_size` | 0.08 | Physical marker size in metres |
-| `frequency` | 24Hz | Throttled to reduce CPU usage |
+| `frequency` | 10Hz | Throttled to reduce CPU usage |
 
 ## Camera startup parameters
 
@@ -39,11 +50,11 @@ The camera node is launched from the ROS bring-up script located at:
 ```
 | Parameter | Value |
 |-----------|-------|
-| `format` | `jpeg` | 
+| `format` | `YUV` | 
 | `height` | 600  | 
 | `width` | 800 | 
 
-The 800x600 resolution is chosen since reducing it further results in the camera using "cropped mode", where it simply crops out a rectangle from the regular image instead of sub-sampling pixels. Cropped mode images are undesirable as it drastically decreases the FOV, giving the output a very "zoomed in" effect.
+The 800x600 resolution is chosen since reducing it further results in the camera using "cropped mode", where it simply crops out a rectangle from the regular image instead of sub-sampling pixels. Cropped mode images are undesirable as it drastically decreases the FOV (from 60° to only about 20°), giving the output a very "zoomed in" effect.
 
 ## Output
 
@@ -68,9 +79,9 @@ The `camera_optical_link` is defined by publishing a static transform to the TF 
 ## Performance Envelope
 Reliable detection: 0.3m – 1.2m, ±30° off-axis (camera FOV ~60°).
 
-Degrades beyond 1.2m under arena fluorescent lighting — see test results T02
+Degrades beyond 1.2m under arena fluorescent lighting.
 
 ## Caveats
-- Marker size does not have to be very precise - fine alignment segment of docking uses LIDAR data instead for distance.
+- Marker pose estimation is quite accurate if calibration is done properly and aruco markers are dimensionally accurate. However, the estimated z-distance is the most unrealiable, hence LIDAR data is used in conjunction for accuracy.
 - Glossy paper causes specular reflection — use matte print
 - Unreliable detection if marker is more than 45° off-axis
