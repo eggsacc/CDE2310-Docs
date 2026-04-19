@@ -1,29 +1,3 @@
-# Remote PC Setup
-
-1. Install ROS2 and turtlebot3 packages following these instructions [here](https://emanual.robotis.com/docs/en/platform/turtlebot3/quick-start/#pc-setup)
-
-2. Create a new directory to clone the auto_nav package.
-``` bash 
-$ mkdir -p ~/colcon_ws/src 
-```
-
-3. Create a ros2 package and git clone auto_nav code into the newly created package.
-```bash
-$ cd ~/colcon_ws/src
-$ ros2 pkg create --build-type ament_python auto_nav
-$ cd ~/colcon_ws/src/auto_nav/auto_nav
-$ git clone git@github.com:eggsacc/CDE2310-Docs.git .
-```
-
-4. Find the nav2 paramerters file for ros2 humble burger, then change these parameters
-```bash
-$ cd ~/turtlebot3_ws/src/turtlebot3/turtlebot3_navigation2/param/humble
-$ nano burger.yaml
-```
-
-* Copy and replace this into the burger.yaml file
-
-```bash
 amcl:
   ros__parameters:
     use_sim_time: False
@@ -374,24 +348,3 @@ waypoint_follower:
       plugin: "nav2_waypoint_follower::WaitAtWaypoint"
       enabled: True
       waypoint_pause_duration: 200
-```
-
-5. Replace the package.xml and setup.py files with symbolic links to the version in the repository.
-```bash
-$ cd ~/colcon_ws/src/auto_nav
-$ rm package.xml setup.py
-$ ln -s auto_nav/package.xml .
-$ ln -s auto_nav/setup.py .
-```
-
-6. You can now build the package on your laptop. 
-```bash
-$ cd ~/colcon_ws
-$ colcon build
-```
-
-7. Run auto_nav using the following commands.
-```bash
-$ source ~/colcon_ws/install/setup.bash
-$ ros2 run auto_nav mainlaunch
-```
