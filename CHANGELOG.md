@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated con-ops mission flow Phase 2 to describe three-phase docking
 - Updated con-ops system architecture to include LIDAR for docking
 
+### Removed
+- Removed remote-pc-codebase folder
+
 ## [1.3.0] - 2026-04-19
 
 ### Added
