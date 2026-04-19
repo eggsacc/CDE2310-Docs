@@ -76,28 +76,6 @@ Sexiest robot!
 │   │       └── setup.py
 │   └── README.md
 │
-├── end-user-doc/
-├── software/
-│   ├── arduino/
-│   │   └── launcher_firware.ino
-│   ├── remote-pc/
-│   │   └── auto_nav/
-│   │       ├── auto_nav/
-│   │       ├── resource/
-│   │       ├── test/
-│   │       ├── package.xml
-│   │       ├── setup.cfg
-│   │       └── setup.py
-│   ├── rpi/
-│   │   └── launcher_commander/
-│   │       ├── launcher_commander/
-│   │       ├── resource/
-│   │       ├── test/
-│   │       ├── package.xml
-│   │       ├── setup.cfg
-│   │       └── setup.py
-│   └── README.md
-│
 ├── hardware/
 │ ├── BOM
 │ ├── Main assembly (CAD)
