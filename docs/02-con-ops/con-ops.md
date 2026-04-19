@@ -19,7 +19,7 @@ The system is divided into three subsystems coordinated by a central FSM node.
 | Subsystem | Key Components | Reference |
 |-----------|---------------|-----------|
 | Navigation | LDS-02 LiDAR, SLAM Toolbox, Nav2, frontier exploration | [Hardware Docs][hw] · [Software Docs][sw] |
-| Perception | RPi Camera V2, OpenCV ArUco, ROS 2 TF2 | [Software Docs][sw] |
+| Perception & Docking | RPi Camera V2, OpenCV ArUco, ROS 2 TF2, LDS-02 LIDAR (final approach) | [Software Docs][sw] |
 | Actuation | 130DC flywheel, SG90 servo gate, Arduino Nano | [Hardware Docs][hw] · [Electronics Docs][elec] |
 
 Processing is split between the **Turtlebot SBC** (SLAM, motor control) and the **remote PC** (ArUco detection, PnP pose estimation) to preserve compute headroom for navigation.
@@ -34,7 +34,7 @@ For full architecture detail, see the [System Architecture docs][arch].
 The robot autonomously explores the maze using frontier-based exploration via Nav2, targeting ≥ 80% map coverage. Simultaneously, the `aruco_detector2` node monitors the TF tree for valid marker detections (IDs 1 and 2).
 
 ### Phase 2 — Dock
-On detecting a marker within range, the FSM transitions to `DOCK_{id}`. The robot aligns frontally using closed-loop PnP pose feedback. Up to 2 retry attempts are permitted before the marker is skipped and exploration resumes.
+On detecting a marker within range, the FSM transitions to `DOCK_{id}`. The docking node executes a three-phase approach: (1) odom dead-reckoning to a standoff point 45 cm along the marker's normal, (2) TF-based fine approach with EMA-filtered pose corrections down to 40 cm, blending bearing and heading alignment, and (3) LIDAR final approach at 1 cm/s to 20 cm from the surface. If the marker is lost during fine approach, a 360° recovery spin searches for re-acquisition. Up to 2 retry attempts are permitted before the marker is skipped and exploration resumes.
 
 ### Phase 3 — Static Launch (Station A)
 The flywheel spins to steady-state and the SG90 servo gate releases 3 balls sequentially per the team-specific timing sequence. On completion, the FSM returns to explore.
@@ -68,6 +68,7 @@ For the full FSM implementation, see the [Software Docs][sw].
 |-----------|--------|-----------------------|
 | Navigation | Nav2 + SLAM Toolbox + frontier exploration | Custom A* |
 | Marker detection | ArUco 4×4_50, PnP pose via OpenCV | Optical flow, LiDAR tracking |
+| Docking | Three-phase approach: odom dead-reckoning → TF fine approach with EMA filtering → LIDAR final (1 cm/s) | Pure visual servoing, Nav2 goal-based docking |
 | Launcher | Dual 130DC flywheel + SG90 servo gate | Solenoid (~6.6% efficiency), CAM-spring |
 | Ball storage | Gravity-fed aluminium ramp (6× 250 mm tubes) | — |
 

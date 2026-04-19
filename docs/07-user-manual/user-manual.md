@@ -38,6 +38,7 @@
 |------|----------|
 | `exploration2` | Path planning, obstacle avoidance, recovery behaviours, online SLAM |
 | `aruco_detector2` | ArUco marker detection; static vs. dynamic classification |
+| `docking` | Three-phase autonomous docking: odom nav to standoff → TF fine approach → LIDAR final approach |
 | `fsm_controller` | Top-level state machine; sequences all mission tasks |
 | `launcher` | Flywheel speed control and servo gate logic |
 
@@ -76,7 +77,7 @@ Key parameters of note:
 
 | Parameter | Value | Purpose |
 |-----------|-------|---------|
-| `xy_goal_tolerance` | 0.25 | Docking alignment tolerance |
+| `xy_goal_tolerance` | 0.25 | Nav2 goal reached tolerance |
 | `inflation_radius` (local) | 0.16 | Tight clearance for maze walls |
 | `inflation_radius` (global) | 0.20 | Global path inflation |
 | `use_astar` | true | A* global planner enabled |
@@ -127,7 +128,8 @@ Perform these steps within the 25-minute mission window, before declaring start.
 | Phase | Description |
 |-------|-------------|
 | **Explore & Map** | SLAM + frontier search. Targets ≥ 80% map coverage. Uses ≤ 4 ArUco landmark markers. |
-| **Station A** | Detects static ArUco (ID 1). Aligns within 10 cm. Dispenses 3 balls in timed sequence. |
+| **Dock** | On detecting a marker within range, the docking node executes three phases: (1) odom dead-reckoning to a 45 cm standoff, (2) TF fine approach with EMA filtering to 40 cm, (3) LIDAR final approach at 1 cm/s to 20 cm. Includes 360° recovery spin if marker is lost. Up to 2 retries before skipping. |
+| **Station A** | Detects static ArUco (ID 1). Dispenses 3 balls in timed sequence. |
 | **Station B** | Detects moving ArUco (ID 2). Tracks receptacle position. Dispenses 3 balls onto moving target. |
 | **Recovery** | Nav2 auto re-plans on any navigation failure. No human intervention required. |
 
