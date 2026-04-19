@@ -39,9 +39,8 @@ Sexiest robot!
 ```
 ├── README.md ← you are here
 ├── CHANGELOG.md
-├── LICENSE
-├── assets/
-├── remote_pc_codebase/ ← Software environment setup guide
+├── .gitignore
+├── remote-pc-codebase/ ← Software environment setup guide
 ├── docs/
 │ ├── 01-requirements/
 │ ├── 02-con-ops/
@@ -77,17 +76,37 @@ Sexiest robot!
 │   │       └── setup.py
 │   └── README.md
 │
-├── bill-of-materials/
-│ └── BOM.pdf
+├── end-user-doc/
+├── software/
+│   ├── arduino/
+│   │   └── launcher_firware.ino
+│   ├── remote-pc/
+│   │   └── auto_nav/
+│   │       ├── auto_nav/
+│   │       ├── resource/
+│   │       ├── test/
+│   │       ├── package.xml
+│   │       ├── setup.cfg
+│   │       └── setup.py
+│   ├── rpi/
+│   │   └── launcher_commander/
+│   │       ├── launcher_commander/
+│   │       ├── resource/
+│   │       ├── test/
+│   │       ├── package.xml
+│   │       ├── setup.cfg
+│   │       └── setup.py
+│   └── README.md
 │
 ├── hardware/
-│ ├── Main assembly.f3z (CAD)
-│ └── Assembly guide.pdf
+│ ├── BOM
+│ ├── Main assembly (CAD)
+│ ├── Assembly guide
+│ └── manufacturing-guide.md
 │
 ├── electronics/
 │ ├── launcher-controller.md
-│ ├── Power budget.pdf
-│ └── assets/
+│ └── power-budget
 ```
 
 ---
