@@ -39,8 +39,9 @@ Sexiest robot!
 ```
 ├── README.md ← you are here
 ├── CHANGELOG.md
-├── .gitignore
-├── remote-pc-codebase/ ← Software environment setup guide
+├── LICENSE
+├── assets/
+├── remote_pc_codebase/ ← Software environment setup guide
 ├── docs/
 │ ├── 01-requirements/
 │ ├── 02-con-ops/
@@ -50,12 +51,11 @@ Sexiest robot!
 │ │ ├── hardware.md
 │ │ └── electronics.md
 │ ├── 05-icd/
-│ ├── 06-sw-firmware/
-│ ├── 07-testing/
-│ ├── 08-user-manual/
-│ └── 09-application-notes/
+│ ├── 06-testing/
+│ ├── 07-user-manual/
+│ └── 08-application-notes/
 │
-├── end-user-doc/
+├── end-user-docs/
 ├── software/
 │   ├── arduino/
 │   │   └── launcher_firware.ino
@@ -77,14 +77,17 @@ Sexiest robot!
 │   │       └── setup.py
 │   └── README.md
 │
+├── bill-of-materials/
+│ └── BOM.pdf
+│
 ├── hardware/
-│ ├── BOM
-│ ├── Main assembly (CAD)
-│ └── Assembly guide
+│ ├── Main assembly.f3z (CAD)
+│ └── Assembly guide.pdf
 │
 ├── electronics/
 │ ├── launcher-controller.md
-│ └── power-budget
+│ ├── Power budget.pdf
+│ └── assets/
 ```
 
 ---

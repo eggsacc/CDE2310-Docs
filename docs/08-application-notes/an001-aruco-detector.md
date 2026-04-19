@@ -50,7 +50,7 @@ The camera node is launched from the ROS bring-up script located at:
 ```
 | Parameter | Value |
 |-----------|-------|
-| `format` | `YUV` | 
+| `format` | `YUYV` | 
 | `height` | 600  | 
 | `width` | 800 | 
 
