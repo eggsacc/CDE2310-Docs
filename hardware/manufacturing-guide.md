@@ -1,6 +1,6 @@
 # 3D Printing
 
-All the 3D printed components can be found in the folder `\3D print components`.
+All the 3D printed components can be found in the folder `\3D print STLs`.
 
 ## Print settings
 - If on Bambu/Orca slicer, select standard 0.2mm layer height profile

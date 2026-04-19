@@ -81,6 +81,7 @@ Sexiest robot!
 │ ├── BOM
 │ ├── Main assembly (CAD)
 │ ├── Assembly guide
+│ ├── 3D print STLs
 │ └── manufacturing-guide.md
 │
 ├── electronics/
