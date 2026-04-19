@@ -14,9 +14,9 @@ The main objective of this project is to design, create and validate an autonomo
 
 | Station | Description | Status |
 |---------|-------------|--------|
-| **Station A** | Static delivery — detect QR/ArUco marker, align, and dispense 3 ping pong balls into a fixed receptacle in a timed sequence | 🔧 In progress |
-| **Station B** | Dynamic delivery — track an oscillating motorised platform and dispense 3 ping pong balls onto the moving target | 🔧 In progress |
-| **Station C/D** *(Bonus)* | Lift lobby → API call to summon lift → ascend to Level 2 → navigate to Station D and perform final delivery | 📋 Planned |
+| **Station A** | Static delivery — detect QR/ArUco marker, align, and dispense 3 ping pong balls into a fixed receptacle in a timed sequence | 🟢 Completed |
+| **Station B** | Dynamic delivery — track an oscillating motorised platform and dispense 3 ping pong balls onto the moving target | 🟢 Completed |
+| **Station C/D** *(Bonus)* | Lift lobby → API call to summon lift → ascend to Level 2 → navigate to Station D and perform final delivery | 🚫 Aborted |
 
 **Key constraints:**
 - Full 25-minute window covers setup, mission execution, and arena cleanup
@@ -32,15 +32,16 @@ The main objective of this project is to design, create and validate an autonomo
 Sexiest robot!
 
 ![robot](assets/grp5-robot.png)
-
+![robot](assets/robot.jpg)
+![robot](assets/robot-LB.jpg)
 ## Repository Structure
 
 ```
 ├── README.md ← you are here
-├── CHANGELOG.md ← version history (SemVer)
+├── CHANGELOG.md
 ├── .gitignore
 ├── remote-pc-codebase/ ← Software environment setup guide
-├── docs/ ← Part 1: Systems Design Documents (SDD)
+├── docs/
 │ ├── 01-requirements/
 │ ├── 02-con-ops/
 │ ├── 03-high-level-design/
@@ -55,41 +56,35 @@ Sexiest robot!
 │ └── 09-application-notes/
 │
 ├── end-user-doc/
-├── ros2-package/
-│ ├── auto_nav/
-│ │ ├── auto_nav/
-│ │ ├── launch/
-│ │ │ └── auto_nav_launch.py
-│ │ ├── resource/
-│ │ ├── test/
-│ │ ├── package.xml
-│ │ ├── setup.cfg
-│ │ └── setup.py
-│ └── rpi/
-│ ├── aruco_detector/
-│ │ ├── aruco_detector/
-│ │ ├── resource/
-│ │ ├── test/
-│ │ ├── package.xml
-│ │ ├── setup.cfg
-│ │ └── setup.py
-│ └── lidar_servo/
-│ ├── lidar_servo/
-│ ├── resource/
-│ ├── test/
-│ ├── LICENSE
-│ ├── package.xml
-│ ├── setup.cfg
-│ └── setup.py
+├── software/
+│   ├── arduino/
+│   │   └── launcher_firware.ino
+│   ├── remote-pc/
+│   │   └── auto_nav/
+│   │       ├── auto_nav/
+│   │       ├── resource/
+│   │       ├── test/
+│   │       ├── package.xml
+│   │       ├── setup.cfg
+│   │       └── setup.py
+│   ├── rpi/
+│   │   └── launcher_commander/
+│   │       ├── launcher_commander/
+│   │       ├── resource/
+│   │       ├── test/
+│   │       ├── package.xml
+│   │       ├── setup.cfg
+│   │       └── setup.py
+│   └── README.md
 │
 ├── hardware/
-│ ├── bom/
-│ ├── cad/
-│ └── assembly-notes.md
+│ ├── BOM
+│ ├── Main assembly (CAD)
+│ └── Assembly guide
 │
-└── electronics/
-├── schematics/
-└── wiring-notes.md
+├── electronics/
+│ ├── launcher-controller.md
+│ └── power-budget
 ```
 
 ---
