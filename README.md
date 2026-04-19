@@ -50,10 +50,31 @@ Sexiest robot!
 │ │ ├── hardware.md
 │ │ └── electronics.md
 │ ├── 05-icd/
-│ ├── 06-sw-firmware/
-│ ├── 07-testing/
-│ ├── 08-user-manual/
-│ └── 09-application-notes/
+│ ├── 06-testing/
+│ ├── 07-user-manual/
+│ └── 08-application-notes/
+│
+├── end-user-docs/
+├── software/
+│   ├── arduino/
+│   │   └── launcher_firware.ino
+│   ├── remote-pc/
+│   │   └── auto_nav/
+│   │       ├── auto_nav/
+│   │       ├── resource/
+│   │       ├── test/
+│   │       ├── package.xml
+│   │       ├── setup.cfg
+│   │       └── setup.py
+│   ├── rpi/
+│   │   └── launcher_commander/
+│   │       ├── launcher_commander/
+│   │       ├── resource/
+│   │       ├── test/
+│   │       ├── package.xml
+│   │       ├── setup.cfg
+│   │       └── setup.py
+│   └── README.md
 │
 ├── end-user-doc/
 ├── software/
