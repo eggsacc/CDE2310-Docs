@@ -1,9 +1,9 @@
 # Interface Control Document (ICD)
 
-**Version:** 1.1.0
-**Last updated:** 2026-04-14
+**Version:** 2.0.0
+**Last updated:** 2026-04-19
 **Author:** Wang Yizhang  
-**Status:** Draft  
+**Status:** Released
 
 ---
 

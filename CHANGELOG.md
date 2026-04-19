@@ -7,64 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.4.0] - 2026-04-19
+## [2.0.0] - 2026-04-19
 
 ### Added
 
 - FAT test procedures with detailed physical and software steps, full FAT checklist
 - Docking node documented in con-ops, user manual, and key design choices
-
-### Fixed
-
-- Fixed README repo structure tree to match actual directory layout
-- Fixed ArUco application note: corrected topic name, `marker_size`, `frequency`, added `benchmark` parameter, updated resolution to 320x240
-- Fixed user manual `xy_goal_tolerance` description
-- Updated con-ops mission flow Phase 2 to describe three-phase docking
-- Updated con-ops system architecture to include LIDAR for docking
-
-### Removed
-- Removed remote-pc-codebase folder
-
-## [1.3.0] - 2026-04-19
-
-### Added
-
-- Added power budget
-- Added assembly guide
-- Added CAD
-- Added launcher electronics
-
-## [1.2.0] - 2026-04-15
-
-### Added
-
-- Added power budget
-- Added assembly guide
-- Added CAD
-- Added launcher electronics
-
-## [1.0.0] - 2026-04-15
-
-### Added
-
-- Updated docs consistency across ros topics & nodes interactions
-- team pic
-- misc docs adjustments
-
-### Removed
-
-- R2 auto_nav default nodes
-
-## [1.1.0] - 2026-04-14
-
-### Added
-
+- Power budget, assembly guide, CAD model
+- Launcher electronics documentation
 - Application note docs (AN003 & AN004 are scaffolds to be filled)
 - ICD v1.0.0
-- Lift API code
-- New launcher CAD render & animations
-- BOM
 - Dynamic launching node to shoot when ArUco detected
+- BOM
+- Team pic
 
 ### Changed
 
@@ -73,15 +28,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dynamic launch node also commands static sequence
 - Updated launcher electronics controller schematic
 - Increased threshold to trigger `DOCK_FAIL` from 5 (0.5s) to 20 (2s) consecutive failed TF lookups
-- ArUco detector node now runs on remote pc
 - Camera resolution reduced to 320 x 240 and file format changed to YUYV
+- Updated con-ops mission flow Phase 2 to describe three-phase docking
+- Updated con-ops system architecture to include LIDAR for docking
+- Docs consistency across ROS topics & nodes interactions
 
 ### Fixed
 
+- README repo structure tree to match actual directory layout
+- ArUco application note: corrected topic name, `marker_size`, `frequency`, added `benchmark` parameter
+- User manual `xy_goal_tolerance` description
 - Controller schematic missing resistor value & incorrect pinmap
 
 ### Removed
 
+- remote-pc-codebase folder
+- R2 auto_nav default nodes
 - Rejection of TF transforms older than 0.5s for docking
 - Unused r2 nodes and old aruco_detector node
 
@@ -116,5 +78,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - RPi-based ArUco marker detection with TF transform broadcasting
 - RPi-based servo and solenoid actuation triggered by LIDAR proximity
 
+[2.0.0]: https://github.com/eggsacc/CDE2310-Docs/releases/tag/v2.0.0
 [1.0.0]: https://github.com/eggsacc/CDE2310-Docs/releases/tag/v1.0.0
 [0.1.0]: https://github.com/eggsacc/CDE2310-Docs/releases/tag/v0.1.0
