@@ -61,12 +61,12 @@ Sexiest robot!
 │   │   └── launcher_firware.ino
 │   ├── remote-pc/
 │   │   ├── auto_nav/
-│   │       ├── auto_nav/
-│   │       ├── resource/
-│   │       ├── test/
-│   │       ├── package.xml
-│   │       ├── setup.cfg
-│   │       └── setup.py
+│   │   │   ├── auto_nav/
+│   │   │   ├── resource/
+│   │   │   ├── test/
+│   │   │   ├── package.xml
+│   │   │   ├── setup.cfg
+│   │   │   └── setup.py
 │   │   └── nav2params/
 │   ├── rpi/
 │   │   └── launcher_commander/
