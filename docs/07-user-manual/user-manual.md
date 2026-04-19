@@ -52,15 +52,22 @@
 
 Follow the official setup instructions [here](https://emanual.robotis.com/docs/en/platform/turtlebot3/quick-start/#pc-setup).
 
-### 2.2 Create Workspace and Clone Package
+### 2.2 Clone Repository and Link Packages
+
+Clone the repository to your home directory:
 
 ```bash
-mkdir -p ~/colcon_ws/src
-cd ~/colcon_ws/src
-ros2 pkg create --build-type ament_python auto_nav
-cd ~/colcon_ws/src/auto_nav/auto_nav
-git clone git@github.com:eggsacc/CDE2310-Docs.git .
+cd ~
+git clone git@github.com:eggsacc/CDE2310-Docs.git
 ```
+
+Then symlink the ROS 2 remote-PC package into your TurtleBot3 workspace:
+
+```bash
+ln -s ~/CDE2310-Docs/software/remote-pc/auto_nav ~/turtlebot3_ws/src/auto_nav
+```
+
+> The `rpi/launcher_commander` package is deployed separately on the Raspberry Pi and does not need to be linked to the remote PC workspace.
 
 ### 2.3 Configure Nav2 Parameters
 
@@ -71,7 +78,7 @@ cd ~/turtlebot3_ws/src/turtlebot3/turtlebot3_navigation2/param/humble
 nano burger.yaml
 ```
 
-Copy and replace the entire contents of `burger.yaml` with the configuration file provided in `config/burger.yaml` in this repository.
+Copy and replace the entire contents of `burger.yaml` with the configuration file in `config/burger.yaml` in the repository.
 
 Key parameters of note:
 
@@ -84,46 +91,68 @@ Key parameters of note:
 | `resolution` | 0.01 | High-resolution costmap |
 | `robot_radius` | 0.15 | TurtleBot3 Burger footprint |
 
-### 2.4 Set Up Package Symlinks
+### 2.4 Build the Workspace
 
 ```bash
-cd ~/colcon_ws/src/auto_nav
-rm package.xml setup.py
-ln -s auto_nav/package.xml .
-ln -s auto_nav/setup.py .
-```
-
-### 2.5 Build the Package
-
-```bash
-cd ~/colcon_ws
+cd ~/turtlebot3_ws
 colcon build
 ```
-
 ---
 
-## 3. Pre-Mission Procedure
+## 3. Raspberry Pi Setup
+
+> Complete this once before the first mission. Not required to be repeated on exam day.
+
+### 3.1 Copy Package to Raspberry Pi
+
+From the remote PC, copy the `launcher_commander` package to the Raspberry Pi workspace over SSH:
+
+```bash
+scp -r ~/CDE2310-Docs/software/rpi/launcher_commander ubuntu@<RPi-IP>:~/turtlebot3_ws/src/
+```
+
+> Replace `<RPi-IP>` with the Raspberry Pi's IP address.
+
+### 3.2 Build the Workspace
+
+SSH into the Raspberry Pi and build the workspace:
+
+```bash
+ssh ubuntu@<RPi-IP>
+cd ~/turtlebot3_ws
+colcon build
+```
+## 4. Arduino Setup
+
+> Complete this once before the first mission. Not required to be repeated on exam day.
+
+### 4.1 Flash Launcher Firmware
+
+Open `software/arduino/launcher_firmware.ino` in the Arduino IDE. Connect the launcher controller board to the remote PC via USB, then upload the sketch.
+
+## 5. Pre-Mission Procedure
 
 Perform these steps within the 25-minute mission window, before declaring start.
 
 | Step | Action |
 |------|--------|
-| 1 | Charge and verify battery voltage **≥ 10.8 V**. Power on robot via OpenCR switch. |
-| 2 | Load **6 ping pong balls** onto the ramp. |
-| 3 | Verify servo gate encapsulates exactly **one ball** in the idle position. |
-| 4 | Place the robot at the **start position** in the maze. |
-| 5 | Begin **screen recording of RViz** on the remote PC. |
-| 6 | On RPi (SSH) — run `rosbu`. Wait until the terminal prints **`Run!`** before proceeding. |
-| 7 | On Remote PC — source the workspace, then run `ros2 run auto_nav mainlaunch` on the mission start command. |
-| 8 | Confirm RViz shows an **active LiDAR scan**. |
+| 1 | Power on robot via OpenCR switch. |
+| 2 | Go through FAT tests. |
+| 3 | Load **6 ping pong balls** onto the ramp. |
+| 4 | Verify servo gate encapsulates exactly **one ball** in the idle position. |
+| 5 | Place the robot at the **start position** in the maze. |
+| 6 | Begin **screen recording of RViz** on the remote PC. |
+| 7 | On RPi (SSH) — run `rosbu`. Wait until the terminal prints **`Run!`** before proceeding. |
+| 8 | On Remote PC — source the workspace, then run `ros2 run auto_nav mainlaunch` on the mission start command. |
+| 9 | Confirm RViz shows an **active LiDAR scan**. |
 
 > ⚠️ Once mission start is declared, **no teleoperation or manual intervention is permitted**. All subsequent operation is fully autonomous.
 
 ---
 
-## 4. Mission Operation
+## 6. Mission Operation
 
-### 4.1 Mission Flow
+### 6.1 Mission Flow
 
 | Phase | Description |
 |-------|-------------|
@@ -133,17 +162,17 @@ Perform these steps within the 25-minute mission window, before declaring start.
 | **Station B** | Detects moving ArUco (ID 2). Tracks receptacle position. Dispenses 3 balls onto moving target. |
 | **Recovery** | Nav2 auto re-plans on any navigation failure. No human intervention required. |
 
-### 4.2 Stopping and Re-attempting
+### 6.2 Stopping and Re-attempting
 
 To restart the mission within the time window:
 
 1. Power off the robot or interrupt the running nodes with `Ctrl-C`
 2. Return the robot to the start position
 3. Reload ping pong balls onto the ramp if needed
-4. Repeat steps 6–8 from [Section 3](#3-pre-mission-procedure)
+4. Repeat steps 7–9 from [Section 5](#5-pre-mission-procedure)
 5. Inform the TA of any major changes made between attempts
 
-### 4.3 White Flag Procedure (Minute 14)
+### 6.3 White Flag Procedure (Minute 14)
 
 If the robot has not reached a delivery station by the **14-minute mark**, the team may invoke the white flag rule to score partial points:
 
