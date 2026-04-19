@@ -66,12 +66,11 @@ Physical computing and mechatronic devices.
 ### 3.3 Electronics Subsystem
 Electrical interfaces and power distribution.
 
-- Arduino Nano GPIO / PWM / analog / I2C
+- Arduino Nano GPIO / PWM / I2C
 - USB serial between Raspberry Pi and Arduino
 - 5 V logic rail for servo and OLED
 - 6 V motor rail from buck converter
 - 11.1 V LiPo to OpenCR
-- 9V battery cell
 - Common ground shared across launcher electronics
 
 ---
@@ -264,8 +263,7 @@ The button is used to toggle or confirm local launcher configuration modes.
 | Raspberry Pi | 5 V from OpenCR |
 | Servo | 5 V from Arduino rail |
 | OLED | 5 V from Arduino rail |
-| Flywheel motor | 6 V rail from buck converter connected to 9V battery|
-| Motor source rail | Derived from OpenCR 12 V output |
+| Flywheel motor | 6 V rail from buck converter connected to OpenCR 12V|
 
 ### 8.2 Grounding
 
