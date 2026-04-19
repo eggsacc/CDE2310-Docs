@@ -142,14 +142,6 @@ Key ROS 2 nodes:
 
 ---
 
-## Hardware
-
-> Full BOM and assembly guide in [`hardware/`](hardware/)
-
-The TurtleBot3 Burger is modified with a custom payload mechanism and mount for the Raspberry Pi Camera V2 (8 MP). All custom components are documented in CAD files under [`hardware/cad/`](hardware/cad/).
-
----
-
 ## Contributing
 
 ### Branch Naming
