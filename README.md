@@ -42,7 +42,6 @@ Sexiest robot!
 ├── README.md ← you are here
 ├── CHANGELOG.md
 ├── .gitignore
-├── remote-pc-codebase/ ← Software environment setup guide
 ├── docs/
 │ ├── 01-requirements/
 │ ├── 02-con-ops/
