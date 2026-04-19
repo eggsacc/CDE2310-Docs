@@ -60,13 +60,14 @@ Sexiest robot!
 │   ├── arduino/
 │   │   └── launcher_firware.ino
 │   ├── remote-pc/
-│   │   └── auto_nav/
+│   │   ├── auto_nav/
 │   │       ├── auto_nav/
 │   │       ├── resource/
 │   │       ├── test/
 │   │       ├── package.xml
 │   │       ├── setup.cfg
 │   │       └── setup.py
+│   │   └── nav2params/
 │   ├── rpi/
 │   │   └── launcher_commander/
 │   │       ├── launcher_commander/
