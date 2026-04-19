@@ -7,7 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.0] - 2026-04-19
+## [1.4.0] - 2026-04-19
+
+### Added
+
+- FAT test procedures with detailed physical and software steps, full FAT checklist
+- Docking node documented in con-ops, user manual, and key design choices
+
+### Fixed
+
+- Fixed README repo structure tree to match actual directory layout
+- Fixed ArUco application note: corrected topic name, `marker_size`, `frequency`, added `benchmark` parameter, updated resolution to 320x240
+- Fixed user manual `xy_goal_tolerance` description
+- Updated con-ops mission flow Phase 2 to describe three-phase docking
+- Updated con-ops system architecture to include LIDAR for docking
+
+## [1.3.0] - 2026-04-19
 
 ### Added
 
@@ -16,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added CAD
 - Added launcher electronics
 
-## [1.0.0] - 2026-04-15
+## [1.2.0] - 2026-04-15
 
 ### Added
 
@@ -37,7 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - R2 auto_nav default nodes
 
-## [1.0.0] - 2026-04-14
+## [1.1.0] - 2026-04-14
 
 ### Added
 
@@ -98,6 +113,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - RPi-based ArUco marker detection with TF transform broadcasting
 - RPi-based servo and solenoid actuation triggered by LIDAR proximity
 
-[unreleased]: https://github.com/eggsacc/CDE2310-Docs/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/eggsacc/CDE2310-Docs/releases/tag/v1.0.0
 [0.1.0]: https://github.com/eggsacc/CDE2310-Docs/releases/tag/v0.1.0

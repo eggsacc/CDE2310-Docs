@@ -11,11 +11,11 @@ including camera calibration, detection parameters, and known limitations.
 
 ## How it works
 ArUco markers are detected using the `aruco_detector` ROS2 package. The node
-subscribes to `/camera/image_compressed`, runs detection on received frames at a fixed frequency, and publishes
+subscribes to `/camera/image_raw/compressed`, runs detection on received frames at a fixed frequency, and publishes
 the detected marker pose as a new link to the TF transform tree.
 
 ## Camera Calibration
-The camera is calibrated to a resolution of 800x600p. The camera intrinisics matrix is defined as a numpy matrix in the source code:
+The camera is calibrated to a resolution of 320x240p. The camera intrinisics matrix is defined as a numpy matrix in the source code:
 
 ```python
 # REMOTE PC!
@@ -36,9 +36,10 @@ self.dist_coeffs = np.array(
 ## ROS2 Parameters
 | Parameter | Default | Notes |
 |-----------|-------|-------|
-| `verbose` | `False` | Enable/disbale logger for debugging |
-| `marker_size` | 0.08 | Physical marker size in metres |
-| `frequency` | 10Hz | Throttled to reduce CPU usage |
+| `verbose` | `False` | Enable/disable logger for debugging |
+| `marker_size` | 0.05 | Physical marker size in metres |
+| `frequency` | 20 | Detection timer rate in Hz |
+| `benchmark` | `False` | Logs per-frame detection and solvePnP timings in ms |
 
 ## Camera startup parameters
 
@@ -51,10 +52,10 @@ The camera node is launched from the ROS bring-up script located at:
 | Parameter | Value |
 |-----------|-------|
 | `format` | `YUYV` | 
-| `height` | 600  | 
-| `width` | 800 | 
+| `height` | 240  | 
+| `width` | 320 | 
 
-The 800x600 resolution is chosen since reducing it further results in the camera using "cropped mode", where it simply crops out a rectangle from the regular image instead of sub-sampling pixels. Cropped mode images are undesirable as it drastically decreases the FOV (from 60° to only about 20°), giving the output a very "zoomed in" effect.
+The 320x240 resolution is chosen to reduce the file size of transmitted images over the ROS topic, lowering bandwidth usage between the RPi and the remote PC.
 
 ## Output
 
