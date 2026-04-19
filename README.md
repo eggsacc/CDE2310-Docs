@@ -80,7 +80,8 @@ Sexiest robot!
 ├── hardware/
 │ ├── BOM
 │ ├── Main assembly (CAD)
-│ └── Assembly guide
+│ ├── Assembly guide
+│ └── manufacturing-guide.md
 │
 ├── electronics/
 │ ├── launcher-controller.md
